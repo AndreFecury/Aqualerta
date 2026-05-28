@@ -1,201 +1,315 @@
-<div align="center">
-
 # AquaAlerta
 
-Sistema inteligente de monitoramento e alerta de enchentes.
+<div align="center">
 
-![Java](https://img.shields.io/badge/Java-ED8B00?style=for-the-badge&logo=openjdk&logoColor=white)
-![Android](https://img.shields.io/badge/Android-Studio-3DDC84?style=for-the-badge&logo=androidstudio&logoColor=white)
-![Firebase](https://img.shields.io/badge/Firebase-FFCA28?style=for-the-badge&logo=firebase&logoColor=black)
-![Status](https://img.shields.io/badge/Status-Em%20Desenvolvimento-yellow?style=for-the-badge)
+### Intelligent Flood Monitoring and Early Warning Platform
+
+<br>
+
+![Flutter](https://img.shields.io/badge/Flutter-02569B?style=for-the-badge\&logo=flutter\&logoColor=white)
+![Dart](https://img.shields.io/badge/Dart-0175C2?style=for-the-badge\&logo=dart\&logoColor=white)
+![Supabase](https://img.shields.io/badge/Supabase-3FCF8E?style=for-the-badge\&logo=supabase\&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-336791?style=for-the-badge\&logo=postgresql\&logoColor=white)
+![Firebase](https://img.shields.io/badge/Firebase-FCM-FFCA28?style=for-the-badge\&logo=firebase\&logoColor=black)
+![OpenStreetMap](https://img.shields.io/badge/OpenStreetMap-7EBC6F?style=for-the-badge\&logo=openstreetmap\&logoColor=white)
+![Architecture](https://img.shields.io/badge/Architecture-BLoC-blue?style=for-the-badge)
+![Status](https://img.shields.io/badge/Status-In%20Development-yellow?style=for-the-badge)
 ![License](https://img.shields.io/github/license/SEU-USUARIO/Aqualerta?style=for-the-badge)
 
 </div>
-# 🌊 AQUALERTA — Monitoramento de Enchentes em Tempo Real
-
-Plataforma mobile para detecção, alerta e visualização de enchentes na Amazônia, com dados de satélites SAR (Sentinel-1), estações hidrológicas da ANA e meteorologia em tempo real.
 
 ---
 
-## 🚀 Setup em 5 passos
+## Overview
 
-### Pré-requisitos
+AquaAlerta is a mobile platform focused on real-time flood monitoring, risk visualization, and early warning systems for vulnerable regions.
 
-| Ferramenta | Versão mínima | Link |
-|---|---|---|
-| Flutter SDK | 3.22+ | https://flutter.dev/docs/get-started/install |
-| Dart | 3.3+ | Incluso no Flutter |
-| Android Studio / VS Code | Qualquer | |
-| Conta Supabase | Free tier | https://supabase.com |
+The project combines:
+
+* hydrological monitoring;
+* geospatial analysis;
+* satellite-based flood detection;
+* meteorological data integration;
+* real-time notifications;
+* scalable cloud infrastructure.
+
+The platform was designed to support disaster prevention initiatives through accessible and data-driven environmental monitoring.
 
 ---
 
-### 1. Clonar e instalar dependências
+## Problem Statement
 
-```bash
-git clone <url-do-repositorio>
-cd aqualerta_app
+Flood events affect thousands of people annually across the Amazon region, generating infrastructure damage, displacement, communication disruption, and public safety risks.
+
+Many affected areas lack accessible monitoring systems capable of delivering preventive alerts and real-time situational awareness.
+
+AquaAlerta addresses this challenge by integrating geospatial intelligence, environmental monitoring, and real-time communication into a unified platform.
+
+---
+
+## Core Features
+
+### Real-Time Monitoring
+
+* Interactive flood monitoring map;
+* Geospatial visualization of critical regions;
+* Real-time hydrological and meteorological updates.
+
+### Flood Detection
+
+* SAR satellite imagery integration;
+* Flood event identification and visualization;
+* Region-based monitoring system.
+
+### Alert Infrastructure
+
+* Severity-based alert system;
+* Push notification delivery;
+* Historical alert tracking.
+
+### User Management
+
+* Secure authentication flow;
+* Personalized monitored regions;
+* Notification preference management.
+
+### Cloud Architecture
+
+* Realtime backend communication;
+* Scalable PostgreSQL/PostGIS infrastructure;
+* Event-driven data synchronization.
+
+---
+
+## System Architecture
+
+```text id="m25vl0"
+                 Sentinel-1 SAR Satellites
+                             │
+                             ▼
+              Geospatial Processing Pipeline
+                             │
+                             ▼
+                Supabase + PostgreSQL/PostGIS
+                             │
+         ┌───────────────────┼───────────────────┐
+         ▼                                       ▼
+    Realtime API                          Firebase FCM
+         │                                       │
+         ▼                                       ▼
+                    Flutter Mobile Application
+                             │
+                             ▼
+                      End Users & Alerts
+```
+
+---
+
+## Technology Stack
+
+### Mobile
+
+* Flutter
+* Dart
+
+### Backend
+
+* Supabase
+* PostgreSQL
+* PostGIS
+
+### Geospatial Services
+
+* Sentinel-1 SAR
+* OpenStreetMap
+* flutter_map
+
+### Architecture
+
+* BLoC Pattern
+* Clean Architecture
+* GoRouter
+
+### Cloud Services
+
+* Firebase Cloud Messaging
+* Supabase Auth
+* Supabase Realtime
+
+---
+
+## Project Structure
+
+```bash id="8q8l2o"
+lib/
+├── app/
+│   ├── router/
+│   └── app.dart
+│
+├── core/
+│   ├── constants/
+│   ├── error/
+│   ├── network/
+│   └── services/
+│
+├── features/
+│   ├── auth/
+│   ├── map/
+│   ├── alerts/
+│   ├── regions/
+│   └── settings/
+│
+├── shared/
+│   ├── theme/
+│   └── widgets/
+│
+└── main.dart
+```
+
+---
+
+## Installation
+
+### Requirements
+
+| Tool             | Version   |
+| ---------------- | --------- |
+| Flutter SDK      | 3.22+     |
+| Dart SDK         | 3.3+      |
+| Android Studio   | Latest    |
+| Supabase Account | Free Tier |
+
+---
+
+### Clone Repository
+
+```bash id="qj6n4o"
+git clone https://github.com/SEU-USUARIO/Aqualerta.git
+cd Aqualerta
+```
+
+---
+
+### Install Dependencies
+
+```bash id="s4rf1w"
 flutter pub get
 ```
 
 ---
 
-### 2. Configurar Supabase
+### Configure Supabase
 
-1. Acesse https://app.supabase.com e crie um projeto (grátis)
-2. Vá em **SQL Editor** e execute todo o conteúdo de `supabase/schema.sql`
-3. Copie a **URL** e a **anon key** do projeto (Settings → API)
+Create a project at:
 
----
+```text id="h80ddf"
+https://supabase.com
+```
 
-### 3. Configurar variáveis de ambiente
+Execute:
 
-Edite o arquivo `lib/main.dart` e substitua os valores:
+```bash id="n72x7g"
+supabase/schema.sql
+```
 
-```dart
+Configure credentials:
+
+```dart id="otd7gn"
 await Supabase.initialize(
-  url: 'https://SEU_PROJETO.supabase.co',   // ← sua URL
-  anonKey: 'SUA_ANON_KEY',                  // ← sua anon key
+  url: 'YOUR_SUPABASE_URL',
+  anonKey: 'YOUR_SUPABASE_ANON_KEY',
 );
 ```
 
-Ou, para builds com `--dart-define`:
+---
 
-```bash
-flutter run \
-  --dart-define=SUPABASE_URL=https://SEU_PROJETO.supabase.co \
-  --dart-define=SUPABASE_ANON_KEY=SUA_ANON_KEY
+### Configure Firebase
+
+1. Create a Firebase project;
+2. Register Android application:
+
+   * `br.com.aqualerta`
+3. Download:
+
+   * `google-services.json`
+
+Move file to:
+
+```text id="y01nq9"
+android/app/google-services.json
 ```
 
 ---
 
-### 4. Instalar fontes (obrigatório)
+## Running the Application
 
-Baixe e coloque em `assets/fonts/`:
-
-**Space Grotesk** → https://fonts.google.com/specimen/Space+Grotesk
-- `SpaceGrotesk-Light.ttf`
-- `SpaceGrotesk-Regular.ttf`
-- `SpaceGrotesk-Medium.ttf`
-- `SpaceGrotesk-SemiBold.ttf`
-- `SpaceGrotesk-Bold.ttf`
-
-**JetBrains Mono** → https://fonts.google.com/specimen/JetBrains+Mono
-- `JetBrainsMono-Regular.ttf`
-
----
-
-### 5. Configurar Firebase (push notifications)
-
-1. Acesse https://console.firebase.google.com
-2. Crie um projeto e adicione app Android com package: `br.com.aqualerta`
-3. Baixe `google-services.json` e substitua o placeholder em:
-   `android/app/google-services.json`
-
-> ⚠️ Sem Firebase, o app funciona normalmente — apenas sem push notifications.
-
----
-
-### Executar o app
-
-```bash
-# Emulador ou device físico
+```bash id="42jlwm"
 flutter run
-
-# Build APK debug (para testar)
-flutter build apk --debug
-
-# Build APK release (para distribuição)
-flutter build apk --release \
-  --dart-define=SUPABASE_URL=https://SEU_PROJETO.supabase.co \
-  --dart-define=SUPABASE_ANON_KEY=SUA_ANON_KEY
 ```
 
-O APK gerado fica em: `build/app/outputs/flutter-apk/app-release.apk`
+Release build:
 
----
-
-## 📱 Funcionalidades
-
-| Tela | Descrição |
-|---|---|
-| **Login/Cadastro** | Autenticação via Supabase Auth (email + senha) |
-| **Mapa** | Mapa interativo com overlay de enchentes detectadas por satélite SAR |
-| **Alertas** | Lista de alertas ativos e histórico, com filtros por severidade |
-| **Regiões** | Gerenciar regiões monitoradas e configurar notificações |
-| **Configurações** | Preferências de notificação, perfil e dados do sistema |
-
----
-
-## 🏗️ Arquitetura
-
-```
-lib/
-├── app/                    # Router (GoRouter) + App root + Login
-├── core/
-│   ├── constants/          # Cores, tipografia, espaçamento
-│   ├── error/              # Classes de falha
-│   └── network/            # Supabase service
-├── features/
-│   ├── map/                # Mapa + BLoC + FloodEvent entity
-│   ├── alerts/             # Alertas + BLoC + Alert entity
-│   ├── regions/            # Regiões + BLoC + MonitoredRegion entity
-│   └── settings/           # Configurações + perfil
-└── shared/
-    ├── theme/              # AppTheme dark
-    └── widgets/            # Componentes reutilizáveis
+```bash id="25afm4"
+flutter build apk --release
 ```
 
-**Estado**: Flutter BLoC (`flutter_bloc`)
-**Navegação**: GoRouter com auth redirect automático
-**Backend**: Supabase (PostgreSQL + PostGIS + Auth + Realtime)
-**Mapas**: flutter_map + OpenStreetMap (100% gratuito)
+---
+
+## Database Structure
+
+| Table             | Description                      |
+| ----------------- | -------------------------------- |
+| monitored_regions | Geographic monitored regions     |
+| flood_events      | Satellite-detected flood events  |
+| alerts            | Issued alert records             |
+| hydro_stations    | Hydrological monitoring stations |
+| hydro_readings    | Real-time river level readings   |
 
 ---
 
-## 💾 Banco de dados (Supabase)
+## Roadmap
 
-Tabelas criadas pelo `supabase/schema.sql`:
+### Current Scope
 
-| Tabela | Descrição |
-|---|---|
-| `monitored_regions` | Regiões geográficas monitoradas (PostGIS) |
-| `user_monitored_regions` | Assinaturas de usuários a regiões |
-| `flood_events` | Eventos de enchente detectados por satélite |
-| `alerts` | Alertas emitidos com severidade e status |
-| `alert_deliveries` | Rastreamento de leitura de alertas |
-| `hydro_stations` | Estações hidrológicas da ANA |
-| `hydro_readings` | Leituras de nível do rio em tempo real |
+* [x] Authentication system
+* [x] Interactive map visualization
+* [x] Realtime alerts
+* [x] Supabase integration
+* [x] Region monitoring
 
----
+### Planned Features
 
-## 💰 Custo operacional
-
-| Serviço | Plano | Custo |
-|---|---|---|
-| Supabase | Free (500MB DB, 2GB Storage) | **R$ 0** |
-| OpenStreetMap tiles | Free (sem limite razoável) | **R$ 0** |
-| Firebase FCM | Free (ilimitado) | **R$ 0** |
-| Copernicus CDSE | Free (imagens SAR) | **R$ 0** |
-| **Total MVP** | | **R$ 0/mês** |
+* [ ] Push notification infrastructure
+* [ ] Offline caching layer
+* [ ] Machine learning risk prediction
+* [ ] Administrative dashboard
+* [ ] CEMADEN integration
+* [ ] Android home widget
+* [ ] Web platform
 
 ---
 
-## 🗺️ Roadmap
+## Scalability
 
-- [x] Mapa interativo com overlay SAR
-- [x] Sistema de alertas com severidade
-- [x] Gerenciamento de regiões
-- [x] Autenticação Supabase
-- [ ] Push notifications via FCM
-- [ ] Modo offline com cache SQLite
-- [ ] Previsão de risco com ML (XGBoost)
-- [ ] Dashboard web (Next.js)
-- [ ] Integração CEMADEN
-- [ ] Widget Android de nível do rio
+The platform architecture was designed to support:
+
+* realtime environmental monitoring;
+* multiple monitored regions;
+* geospatial data processing;
+* scalable cloud infrastructure;
+* integration with governmental APIs;
+* future nationwide deployment.
 
 ---
 
-## 📄 Licença
+## Social Impact
 
-MIT — uso livre para fins educacionais e humanitários.
+AquaAlerta aims to improve access to critical environmental information in vulnerable areas through accessible monitoring technology and early warning mechanisms.
+
+The project focuses on prevention, risk communication, and disaster response support.
+
+---
+
+## License
+
+This project is licensed under the MIT License.
