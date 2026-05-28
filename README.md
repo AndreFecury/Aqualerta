@@ -1,3 +1,16 @@
+<div align="center">
+
+# AquaAlerta
+
+Sistema inteligente de monitoramento e alerta de enchentes.
+
+![Java](https://img.shields.io/badge/Java-ED8B00?style=for-the-badge&logo=openjdk&logoColor=white)
+![Android](https://img.shields.io/badge/Android-Studio-3DDC84?style=for-the-badge&logo=androidstudio&logoColor=white)
+![Firebase](https://img.shields.io/badge/Firebase-FFCA28?style=for-the-badge&logo=firebase&logoColor=black)
+![Status](https://img.shields.io/badge/Status-Em%20Desenvolvimento-yellow?style=for-the-badge)
+![License](https://img.shields.io/github/license/SEU-USUARIO/Aqualerta?style=for-the-badge)
+
+</div>
 # 🌊 AQUALERTA — Monitoramento de Enchentes em Tempo Real
 
 Plataforma mobile para detecção, alerta e visualização de enchentes na Amazônia, com dados de satélites SAR (Sentinel-1), estações hidrológicas da ANA e meteorologia em tempo real.
