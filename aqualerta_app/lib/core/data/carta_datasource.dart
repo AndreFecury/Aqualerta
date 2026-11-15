@@ -1,0 +1,191 @@
+import 'package:latlong2/latlong.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:aqualerta/core/domain/carta.dart';
+import 'package:aqualerta/core/domain/severidade.dart';
+
+/// Lê do Supabase tudo o que as telas da v3 mostram.
+///
+/// Usa as views de `supabase/migrations/20261115_v3_views.sql`. Se elas ainda
+/// não existirem no banco, cai para as tabelas e views antigas, sem contornos
+/// e sem estações, em vez de quebrar a tela.
+class CartaDatasource {
+  CartaDatasource([SupabaseClient? cliente]) : _c = cliente ?? Supabase.instance.client;
+
+  final SupabaseClient _c;
+
+  /// `false` quando o banco ainda não tem as views da v3.
+  bool viewsV3Disponiveis = true;
+
+  double? _d(Object? v) => (v as num?)?.toDouble();
+
+  Future<List<Regiao>> regioes() async {
+    try {
+      final linhas = await _c
+          .from('v_regioes_mapa')
+          .select('id, name, state_code, municipality, area_km2, geojson, center_lat, center_lng')
+          .order('name');
+      return [
+        for (final r in linhas)
+          Regiao(
+            id: r['id'] as String,
+            nome: r['name'] as String,
+            uf: r['state_code'] as String? ?? '',
+            municipio: r['municipality'] as String?,
+            areaKm2: _d(r['area_km2']),
+            centro: (r['center_lat'] != null && r['center_lng'] != null)
+                ? LatLng(_d(r['center_lat'])!, _d(r['center_lng'])!)
+                : null,
+            contornos: contornosDoGeoJson(r['geojson']),
+          ),
+      ];
+    } on PostgrestException {
+      viewsV3Disponiveis = false;
+      final linhas = await _c
+          .from('monitored_regions')
+          .select('id, name, state_code, municipality, area_km2')
+          .eq('is_public', true)
+          .order('name');
+      return [
+        for (final r in linhas)
+          Regiao(
+            id: r['id'] as String,
+            nome: r['name'] as String,
+            uf: r['state_code'] as String? ?? '',
+            municipio: r['municipality'] as String?,
+            areaKm2: _d(r['area_km2']),
+          ),
+      ];
+    }
+  }
+
+  Future<List<Evento>> eventos() async {
+    try {
+      final linhas = await _c
+          .from('v_eventos_mapa')
+          .select('id, region_id, region_name, state_code, detected_at, severity, flooded_area_km2, area_real, geojson')
+          .order('detected_at', ascending: false)
+          .limit(200);
+      return [
+        for (final r in linhas)
+          Evento(
+            id: r['id'] as String,
+            regiaoId: r['region_id'] as String,
+            regiaoNome: '${r['region_name']}, ${r['state_code']}',
+            detectadoEm: DateTime.parse(r['detected_at'] as String),
+            severidade: Severidade.doCodigo(r['severity'] as String?),
+            areaKm2: _d(r['flooded_area_km2']),
+            areaReal: r['area_real'] as bool? ?? false,
+            contornos: contornosDoGeoJson(r['geojson']),
+          ),
+      ];
+    } on PostgrestException {
+      viewsV3Disponiveis = false;
+      // Corrige a consulta antiga, que pedia colunas inexistentes em flood_events.
+      final linhas = await _c
+          .from('v_recent_flood_events')
+          .select('id, region_id, region_name, state_code, detected_at, severity, flooded_area_km2');
+      return [
+        for (final r in linhas)
+          Evento(
+            id: r['id'] as String,
+            regiaoId: r['region_id'] as String,
+            regiaoNome: '${r['region_name']}, ${r['state_code']}',
+            detectadoEm: DateTime.parse(r['detected_at'] as String),
+            severidade: Severidade.doCodigo(r['severity'] as String?),
+            areaKm2: _d(r['flooded_area_km2']),
+          ),
+      ];
+    }
+  }
+
+  Future<List<Estacao>> estacoes() async {
+    try {
+      final linhas = await _c.from('v_estacoes_nivel').select().order('name');
+      return [
+        for (final r in linhas)
+          Estacao(
+            id: r['id'] as String,
+            codigoAna: r['ana_code'] as String,
+            nome: r['name'] as String,
+            rio: r['river'] as String?,
+            posicao: (r['lat'] != null && r['lng'] != null) ? LatLng(_d(r['lat'])!, _d(r['lng'])!) : null,
+            cotas: _cotas(r),
+            nivel: _d(r['water_level_m']),
+            lidoEm: r['recorded_at'] != null ? DateTime.parse(r['recorded_at'] as String) : null,
+          ),
+      ];
+    } on PostgrestException {
+      viewsV3Disponiveis = false;
+      return const [];
+    }
+  }
+
+  CotasEstacao? _cotas(Map<String, dynamic> r) {
+    final n = _d(r['normal_level_m']);
+    final a = _d(r['alert_level_m']);
+    final i = _d(r['flood_level_m']);
+    final e = _d(r['emergency_level_m']);
+    if (n == null || a == null || i == null || e == null) return null;
+    if (!(n <= a && a <= i && i <= e)) return null;
+    return CotasEstacao(normal: n, alerta: a, inundacao: i, emergencia: e);
+  }
+
+  /// Alertas ativos e os encerrados nos últimos 90 dias.
+  Future<List<AlertaV3>> alertas() async {
+    final desde = DateTime.now().subtract(const Duration(days: 90)).toIso8601String();
+    final linhas = await _c
+        .from('alerts')
+        .select('id, region_id, title, body, severity, status, issued_at, resolved_at, flood_event_id, '
+            'monitored_regions!inner(name, state_code)')
+        .or('status.eq.ACTIVE,issued_at.gte.$desde')
+        .order('issued_at', ascending: false)
+        .limit(200);
+    return [
+      for (final r in linhas)
+        AlertaV3(
+          id: r['id'] as String,
+          regiaoId: r['region_id'] as String,
+          regiaoNome: '${r['monitored_regions']['name']}, ${r['monitored_regions']['state_code']}',
+          titulo: r['title'] as String,
+          texto: r['body'] as String,
+          severidadeOriginal: Severidade.doCodigo(r['severity'] as String?),
+          ativo: r['status'] == 'ACTIVE',
+          emitidoEm: DateTime.parse(r['issued_at'] as String),
+          encerradoEm: r['resolved_at'] != null ? DateTime.parse(r['resolved_at'] as String) : null,
+          eventoId: r['flood_event_id'] as String?,
+        ),
+    ];
+  }
+
+  /// Regiões que o usuário segue (ids).
+  Future<Set<String>> regioesSeguidas() async {
+    final uid = _c.auth.currentUser?.id;
+    if (uid == null) return {};
+    final linhas = await _c.from('user_monitored_regions').select('region_id').eq('user_id', uid);
+    return {for (final r in linhas) r['region_id'] as String};
+  }
+
+  Future<void> seguir(String regiaoId, {required bool seguir}) async {
+    final uid = _c.auth.currentUser?.id;
+    if (uid == null) return;
+    if (seguir) {
+      await _c.from('user_monitored_regions').upsert({'user_id': uid, 'region_id': regiaoId});
+    } else {
+      await _c.from('user_monitored_regions').delete().eq('user_id', uid).eq('region_id', regiaoId);
+    }
+  }
+
+  /// Avisa quando alertas, eventos ou leituras mudam no banco.
+  RealtimeChannel ouvirMudancas(void Function() aoMudar) {
+    final canal = _c.channel('aqualerta-v3');
+    for (final tabela in ['alerts', 'flood_events', 'hydro_readings']) {
+      canal.onPostgresChanges(
+        event: PostgresChangeEvent.all,
+        schema: 'public',
+        table: tabela,
+        callback: (_) => aoMudar(),
+      );
+    }
+    return canal..subscribe();
+  }
+}

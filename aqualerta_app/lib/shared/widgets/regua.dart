@@ -82,12 +82,10 @@ class _ReguaPainter extends CustomPainter {
   final TextScaler escalaTexto;
 
   // Faixa da escala: um pouco abaixo da cota normal até um pouco acima da emergência.
-  double get _min => vertical
-      ? (cotas.normal - 1).floorToDouble()
-      : cotas.normal - (cotas.emergencia - cotas.normal) * 0.12;
-  double get _max => vertical
-      ? (cotas.emergencia + 0.5).ceilToDouble()
-      : cotas.emergencia + (cotas.emergencia - cotas.normal) * 0.06;
+  double get _min =>
+      vertical ? (cotas.normal - 1).floorToDouble() : cotas.normal - (cotas.emergencia - cotas.normal) * 0.12;
+  double get _max =>
+      vertical ? (cotas.emergencia + 0.5).ceilToDouble() : cotas.emergencia + (cotas.emergencia - cotas.normal) * 0.06;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -98,9 +96,7 @@ class _ReguaPainter extends CustomPainter {
     // Posição de um valor em metros ao longo da régua.
     double pos(double v) {
       final t = ((v - _min) / (_max - _min)).clamp(0.0, 1.0);
-      return vertical
-          ? size.height - margem - t * (size.height - 2 * margem)
-          : t * size.width;
+      return vertical ? size.height - margem - t * (size.height - 2 * margem) : t * size.width;
     }
 
     canvas.drawRRect(rr, Paint()..color = cores.papel);
@@ -109,9 +105,7 @@ class _ReguaPainter extends CustomPainter {
       _hachuraVazia(canvas, rr);
     } else {
       final p = pos(nivel!);
-      final agua = vertical
-          ? Rect.fromLTRB(0, p, size.width, size.height)
-          : Rect.fromLTRB(0, 0, p, size.height);
+      final agua = vertical ? Rect.fromLTRB(0, p, size.width, size.height) : Rect.fromLTRB(0, 0, p, size.height);
       canvas.save();
       canvas.clipRRect(rr);
       canvas.drawRect(agua, Paint()..color = cores.aguaFunda.withValues(alpha: 0.75));
@@ -164,8 +158,9 @@ class _ReguaPainter extends CustomPainter {
       final p = pos(valor);
       final linha = Path();
       if (vertical) {
+        // Começa depois dos números, para não riscar a escala.
         linha
-          ..moveTo(0, p)
+          ..moveTo(mostrarNumeros ? size.width * 0.5 : 0, p)
           ..lineTo(size.width + 14, p);
       } else {
         linha

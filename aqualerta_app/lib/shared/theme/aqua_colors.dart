@@ -68,8 +68,7 @@ class AquaColors extends ThemeExtension<AquaColors> {
   Color corDe(Severidade s) => risco[s]!;
   Color textoDe(Severidade s) => textoRisco[s]!;
 
-  static AquaColors of(BuildContext context) =>
-      Theme.of(context).extension<AquaColors>()!;
+  static AquaColors of(BuildContext context) => Theme.of(context).extension<AquaColors>()!;
 
   static const claro = AquaColors(
     fundo: Color(0xFFEDF0EA),

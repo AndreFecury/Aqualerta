@@ -3,18 +3,11 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:aqualerta/shared/theme/app_theme.dart';
-import 'package:aqualerta/shared/theme/aqua_colors.dart';
 import 'package:aqualerta/shared/theme/aqua_theme.dart';
 import 'package:aqualerta/features/settings/presentation/cubit/aparencia_cubit.dart';
+import 'package:aqualerta/features/settings/presentation/cubit/notificacoes_cubit.dart';
+import 'package:aqualerta/features/map/presentation/cubit/camadas_cubit.dart';
 import 'router.dart';
-
-/// Liga os temas da v3 (claro e "noite no rio").
-///
-/// Fica desligado enquanto as telas antigas, que usam cores fixas do tema
-/// escuro anterior, não forem migradas. Nesse período o app usa o tema antigo
-/// com as cores da v3 disponíveis para os componentes novos.
-const bool temaV3Ativo = false;
 
 class AqualertaApp extends StatefulWidget {
   const AqualertaApp({required this.preferencias, super.key});
@@ -45,19 +38,19 @@ class _AqualertaAppState extends State<AqualertaApp> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (_) => AparenciaCubit(widget.preferencias),
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider(create: (_) => AparenciaCubit(widget.preferencias)),
+        BlocProvider(create: (_) => NotificacoesCubit(widget.preferencias, cliente: Supabase.instance.client)),
+        BlocProvider(create: (_) => CamadasCubit(widget.preferencias)),
+      ],
       child: BlocBuilder<AparenciaCubit, Aparencia>(
         builder: (context, aparencia) => MaterialApp.router(
           title: 'AquaAlerta',
           debugShowCheckedModeBanner: false,
-          theme: temaV3Ativo
-              ? AquaTheme.claro
-              : AppTheme.dark.copyWith(extensions: const [AquaColors.escuro]),
-          darkTheme: temaV3Ativo
-              ? AquaTheme.escuro
-              : AppTheme.dark.copyWith(extensions: const [AquaColors.escuro]),
-          themeMode: temaV3Ativo ? aparencia.tema : ThemeMode.dark,
+          theme: AquaTheme.claro,
+          darkTheme: AquaTheme.escuro,
+          themeMode: aparencia.tema,
           routerConfig: _router,
           // O tamanho do texto segue o celular (ou a escolha feita no Perfil),
           // dentro de limites que não quebram o layout.

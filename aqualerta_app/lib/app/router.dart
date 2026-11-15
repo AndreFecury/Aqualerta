@@ -1,239 +1,126 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:aqualerta/core/constants/app_colors.dart';
-import 'package:aqualerta/core/constants/app_typography.dart';
-import 'package:aqualerta/features/map/presentation/bloc/map_bloc.dart';
-import 'package:aqualerta/features/map/presentation/screens/map_screen.dart';
-import 'package:aqualerta/features/alerts/presentation/bloc/alerts_bloc.dart';
-import 'package:aqualerta/features/alerts/presentation/screens/alerts_screen.dart';
-import 'package:aqualerta/features/regions/presentation/bloc/regions_bloc.dart';
-import 'package:aqualerta/features/regions/presentation/screens/regions_screen.dart';
-import 'package:aqualerta/features/settings/presentation/screens/settings_screen.dart';
-import 'package:aqualerta/features/map/data/datasources/map_remote_datasource.dart';
-import 'package:aqualerta/features/alerts/data/datasources/alerts_remote_datasource.dart';
-import 'package:aqualerta/features/regions/data/datasources/regions_remote_datasource.dart';
+import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:aqualerta/core/data/carta_datasource.dart';
+import 'package:aqualerta/core/notificacoes/avisos_service.dart';
+import 'package:aqualerta/features/settings/presentation/cubit/notificacoes_cubit.dart';
+import 'package:aqualerta/core/state/painel_cubit.dart';
+import 'package:aqualerta/features/alerts/presentation/screens/alertas_screen.dart';
+import 'package:aqualerta/features/alerts/presentation/screens/detalhe_alerta_screen.dart';
+import 'package:aqualerta/features/map/presentation/screens/mapa_screen.dart';
+import 'package:aqualerta/features/regions/presentation/screens/rios_screen.dart';
+import 'package:aqualerta/features/settings/presentation/screens/perfil_screen.dart';
 import 'screens/login_screen.dart';
 
-final _rootNavigatorKey = GlobalKey<NavigatorState>();
-final _shellNavigatorKey = GlobalKey<NavigatorState>();
+final _raiz = GlobalKey<NavigatorState>();
+final _abas = GlobalKey<NavigatorState>();
 
 final router = GoRouter(
-  navigatorKey: _rootNavigatorKey,
+  navigatorKey: _raiz,
   initialLocation: '/map',
   redirect: (context, state) {
-    final isLoggedIn = Supabase.instance.client.auth.currentUser != null;
-    final isLoginRoute = state.matchedLocation == '/login';
-    if (!isLoggedIn && !isLoginRoute) return '/login';
-    if (isLoggedIn && isLoginRoute) return '/map';
+    final logado = Supabase.instance.client.auth.currentUser != null;
+    final noLogin = state.matchedLocation == '/login';
+    if (!logado && !noLogin) return '/login';
+    if (logado && noLogin) return '/map';
     return null;
   },
   routes: [
-    // Login
-    GoRoute(
-      path: '/login',
-      builder: (_, __) => const LoginScreen(),
-    ),
-
-    // Main shell with bottom nav
+    GoRoute(path: '/login', builder: (_, __) => const LoginScreen()),
     ShellRoute(
-      navigatorKey: _shellNavigatorKey,
-      builder: (context, state, child) => _AppShell(child: child),
+      navigatorKey: _abas,
+      builder: (context, state, child) => BlocProvider(
+        // Criado depois do login: as consultas precisam do usuário autenticado.
+        create: (_) => PainelCubit(CartaDatasource()),
+        child: _OuvinteAvisos(child: _Abas(child: child)),
+      ),
       routes: [
-        GoRoute(
-          path: '/map',
-          pageBuilder: (_, __) => const NoTransitionPage(child: MapScreen()),
-        ),
+        GoRoute(path: '/map', pageBuilder: (_, __) => const NoTransitionPage(child: MapaScreen())),
         GoRoute(
           path: '/alerts',
-          pageBuilder: (_, __) =>
-              const NoTransitionPage(child: AlertsScreen()),
+          pageBuilder: (_, __) => const NoTransitionPage(child: AlertasScreen()),
+          routes: [
+            GoRoute(path: ':id', builder: (_, s) => DetalheAlertaScreen(alertaId: s.pathParameters['id']!)),
+          ],
         ),
-        GoRoute(
-          path: '/regions',
-          pageBuilder: (_, __) =>
-              const NoTransitionPage(child: RegionsScreen()),
-        ),
-        GoRoute(
-          path: '/settings',
-          pageBuilder: (_, __) =>
-              const NoTransitionPage(child: SettingsScreen()),
-        ),
+        GoRoute(path: '/rios', pageBuilder: (_, __) => const NoTransitionPage(child: RiosScreen())),
+        GoRoute(path: '/perfil', pageBuilder: (_, __) => const NoTransitionPage(child: PerfilScreen())),
+        // Endereços antigos continuam funcionando.
+        GoRoute(path: '/regions', redirect: (_, __) => '/rios'),
+        GoRoute(path: '/settings', redirect: (_, __) => '/perfil'),
       ],
     ),
   ],
 );
 
-// ── AppShell ─────────────────────────────────────────────────
-class _AppShell extends StatelessWidget {
+class _Abas extends StatelessWidget {
+  const _Abas({required this.child});
   final Widget child;
-  const _AppShell({required this.child});
+
+  static const _rotas = ['/map', '/alerts', '/rios', '/perfil'];
 
   @override
   Widget build(BuildContext context) {
-    return MultiBlocProvider(
-      providers: [
-        BlocProvider(create: (_) => MapBloc(MapRemoteDatasource())),
-        BlocProvider(create: (_) => AlertsBloc(AlertsRemoteDatasource())),
-        BlocProvider(create: (_) => RegionsBloc(RegionsRemoteDatasource())),
-      ],
-      child: Scaffold(
-        body: child,
-        bottomNavigationBar: _BottomNav(),
-      ),
-    );
-  }
-}
+    final local = GoRouterState.of(context).uri.path;
+    final indice = _rotas.indexWhere(local.startsWith).clamp(0, _rotas.length - 1);
+    final ativos = context.select<PainelCubit, int>((c) => c.state.ativos.length);
 
-class _BottomNav extends StatelessWidget {
-  final _routes = ['/map', '/alerts', '/regions', '/settings'];
-
-  int _currentIndex(BuildContext context) {
-    final location = GoRouterState.of(context).uri.path;
-    final idx = _routes.indexWhere((r) => location.startsWith(r));
-    return idx >= 0 ? idx : 0;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final idx = _currentIndex(context);
-
-    return Container(
-      decoration: const BoxDecoration(
-        color: AppColors.bg1,
-        border: Border(top: BorderSide(color: AppColors.border)),
-      ),
-      child: SafeArea(
-        child: SizedBox(
-          height: 62,
-          child: Row(
-            children: [
-              _NavItem(
-                icon: Icons.map_rounded,
-                iconActive: Icons.map_rounded,
-                label: 'Mapa',
-                active: idx == 0,
-                onTap: () => context.go('/map'),
-                badge: 0,
-              ),
-              _NavItem(
-                icon: Icons.notifications_outlined,
-                iconActive: Icons.notifications_rounded,
-                label: 'Alertas',
-                active: idx == 1,
-                onTap: () => context.go('/alerts'),
-                badge: 0,
-              ),
-              _NavItem(
-                icon: Icons.explore_outlined,
-                iconActive: Icons.explore_rounded,
-                label: 'Regiões',
-                active: idx == 2,
-                onTap: () => context.go('/regions'),
-                badge: 0,
-              ),
-              _NavItem(
-                icon: Icons.settings_outlined,
-                iconActive: Icons.settings_rounded,
-                label: 'Config',
-                active: idx == 3,
-                onTap: () => context.go('/settings'),
-                badge: 0,
-              ),
-            ],
+    return Scaffold(
+      body: child,
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: indice,
+        onDestinationSelected: (i) => context.go(_rotas[i]),
+        destinations: [
+          const NavigationDestination(icon: Icon(Icons.map_outlined), selectedIcon: Icon(Icons.map), label: 'Mapa'),
+          NavigationDestination(
+            icon: Badge(
+                isLabelVisible: ativos > 0, label: Text('$ativos'), child: const Icon(Icons.notifications_outlined)),
+            selectedIcon:
+                Badge(isLabelVisible: ativos > 0, label: Text('$ativos'), child: const Icon(Icons.notifications)),
+            label: 'Alertas',
+            tooltip: ativos > 0 ? 'Alertas: $ativos ativos' : 'Alertas',
           ),
-        ),
+          const NavigationDestination(icon: Icon(Icons.straighten), label: 'Rios'),
+          const NavigationDestination(
+              icon: Icon(Icons.person_outline), selectedIcon: Icon(Icons.person), label: 'Perfil'),
+        ],
       ),
     );
   }
 }
 
-class _NavItem extends StatelessWidget {
-  final IconData icon;
-  final IconData iconActive;
-  final String label;
-  final bool active;
-  final VoidCallback onTap;
-  final int badge;
+/// Mostra uma notificação quando chega um alerta novo numa região seguida.
+/// Os alertas que já existiam ao abrir o app não geram aviso.
+class _OuvinteAvisos extends StatefulWidget {
+  const _OuvinteAvisos({required this.child});
+  final Widget child;
 
-  const _NavItem({
-    required this.icon,
-    required this.iconActive,
-    required this.label,
-    required this.active,
-    required this.onTap,
-    required this.badge,
-  });
+  @override
+  State<_OuvinteAvisos> createState() => _OuvinteAvisosState();
+}
+
+class _OuvinteAvisosState extends State<_OuvinteAvisos> {
+  Set<String>? _vistos;
 
   @override
   Widget build(BuildContext context) {
-    return Expanded(
-      child: GestureDetector(
-        onTap: onTap,
-        behavior: HitTestBehavior.opaque,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Stack(
-              clipBehavior: Clip.none,
-              children: [
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  width: 40,
-                  height: 32,
-                  decoration: BoxDecoration(
-                    color: active
-                        ? AppColors.brandGlow
-                        : Colors.transparent,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Icon(
-                    active ? iconActive : icon,
-                    size: 22,
-                    color: active
-                        ? AppColors.brandPrimary
-                        : AppColors.textSecondary,
-                  ),
-                ),
-                if (badge > 0)
-                  Positioned(
-                    top: -3,
-                    right: -3,
-                    child: Container(
-                      width: 16,
-                      height: 16,
-                      decoration: const BoxDecoration(
-                        color: AppColors.sevHigh,
-                        shape: BoxShape.circle,
-                      ),
-                      child: Center(
-                        child: Text(
-                          '$badge',
-                          style: AppTypography.label.copyWith(
-                            fontSize: 9,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 2),
-            AnimatedDefaultTextStyle(
-              duration: const Duration(milliseconds: 200),
-              style: AppTypography.label.copyWith(
-                color: active
-                    ? AppColors.brandPrimary
-                    : AppColors.textDisabled,
-                fontSize: 10,
-              ),
-              child: Text(label),
-            ),
-          ],
-        ),
-      ),
+    return BlocListener<PainelCubit, Painel>(
+      listenWhen: (antes, depois) => depois.temDados && antes.alertas != depois.alertas,
+      listener: (context, painel) {
+        final ativos = painel.ativos;
+        if (_vistos == null) {
+          _vistos = {for (final a in ativos) a.id};
+          return;
+        }
+        final prefs = context.read<NotificacoesCubit>().state;
+        for (final a in ativos) {
+          if (_vistos!.add(a.id) && painel.seguidas.contains(a.regiaoId)) {
+            AvisosService.instancia.avisar(a, prefs);
+          }
+        }
+      },
+      child: widget.child,
     );
   }
 }

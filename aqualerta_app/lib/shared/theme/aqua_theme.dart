@@ -158,8 +158,7 @@ abstract class AquaTheme {
 
       switchTheme: SwitchThemeData(
         thumbColor: WidgetStateProperty.all(c.papel),
-        trackColor: WidgetStateProperty.resolveWith(
-            (e) => e.contains(WidgetState.selected) ? c.canal : c.tinta2),
+        trackColor: WidgetStateProperty.resolveWith((e) => e.contains(WidgetState.selected) ? c.canal : c.tinta2),
         trackOutlineColor: WidgetStateProperty.all(Colors.transparent),
       ),
 
@@ -169,8 +168,7 @@ abstract class AquaTheme {
   }
 
   static TextTheme _textos(AquaColors c) {
-    TextStyle t(double tamanho, FontWeight peso, {Color? cor, double altura = 1.3, double espaco = 0}) =>
-        TextStyle(
+    TextStyle t(double tamanho, FontWeight peso, {Color? cor, double altura = 1.3, double espaco = 0}) => TextStyle(
           fontFamily: fonte,
           fontSize: tamanho,
           fontWeight: peso,
