@@ -20,7 +20,8 @@ SELECT
 FROM public.monitored_regions mr
 WHERE mr.is_public = true;
 
--- Eventos de inundação dos últimos 30 dias, com a área real
+-- Eventos de inundação dos últimos 30 dias ou ligados a um alerta ativo,
+-- com a área real
 -- (affected_geometry) quando existir; senão, o contorno da região.
 CREATE OR REPLACE VIEW public.v_eventos_mapa
 WITH (security_invoker = on) AS
@@ -36,7 +37,8 @@ SELECT
     ST_AsGeoJSON(COALESCE(fe.affected_geometry, mr.geometry))::json AS geojson
 FROM public.flood_events fe
 JOIN public.monitored_regions mr ON mr.id = fe.region_id
-WHERE fe.detected_at > now() - interval '30 days';
+WHERE fe.detected_at > now() - interval '30 days'
+   OR fe.id IN (SELECT a.flood_event_id FROM public.alerts a WHERE a.status = 'ACTIVE');
 
 -- Estações da ANA com posição, cotas e a leitura mais recente.
 CREATE OR REPLACE VIEW public.v_estacoes_nivel
@@ -68,7 +70,16 @@ GRANT SELECT ON public.v_regioes_mapa, public.v_eventos_mapa, public.v_estacoes_
     TO anon, authenticated;
 
 -- Leituras atualizadas em tempo real na tela Rios.
-ALTER PUBLICATION supabase_realtime ADD TABLE public.hydro_readings;
+-- (Pode rodar mais de uma vez: só adiciona se ainda não estiver.)
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_publication_tables
+        WHERE pubname = 'supabase_realtime' AND schemaname = 'public' AND tablename = 'hydro_readings'
+    ) THEN
+        ALTER PUBLICATION supabase_realtime ADD TABLE public.hydro_readings;
+    END IF;
+END $$;
 
 -- ============================================================
 -- Dados de exemplo (opcional, remova em produção).

@@ -1,6 +1,6 @@
-﻿plugins {
+plugins {
     id("com.android.application")
-    id("org.jetbrains.kotlin.android")
+    // O plugin do Flutter precisa vir depois dos plugins do Android e do Kotlin.
     id("dev.flutter.flutter-gradle-plugin")
 }
 
@@ -12,11 +12,8 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+        // Necessário para flutter_local_notifications.
         isCoreLibraryDesugaringEnabled = true
-    }
-
-    kotlinOptions {
-        jvmTarget = "17"
     }
 
     defaultConfig {
@@ -29,8 +26,15 @@ android {
 
     buildTypes {
         release {
+            // Assinado com a chave de depuração por enquanto (APK para testes).
             signingConfig = signingConfigs.getByName("debug")
         }
+    }
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
     }
 }
 
