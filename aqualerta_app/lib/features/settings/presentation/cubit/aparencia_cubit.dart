@@ -35,11 +35,15 @@ class Aparencia extends Equatable {
 
   /// Escala final do texto a partir da escala do sistema.
   TextScaler escalaFinal(TextScaler doSistema) {
-    final base = usarTamanhoDoCelular ? doSistema : TextScaler.linear(escala.fator);
-    return base.clamp(minScaleFactor: escalaMinima, maxScaleFactor: escalaMaxima);
+    final base =
+        usarTamanhoDoCelular ? doSistema : TextScaler.linear(escala.fator);
+    return base.clamp(
+        minScaleFactor: escalaMinima, maxScaleFactor: escalaMaxima);
   }
 
-  Aparencia copyWith({bool? usarTamanhoDoCelular, EscalaTexto? escala, ThemeMode? tema}) => Aparencia(
+  Aparencia copyWith(
+          {bool? usarTamanhoDoCelular, EscalaTexto? escala, ThemeMode? tema}) =>
+      Aparencia(
         usarTamanhoDoCelular: usarTamanhoDoCelular ?? this.usarTamanhoDoCelular,
         escala: escala ?? this.escala,
         tema: tema ?? this.tema,
@@ -64,7 +68,8 @@ class AparenciaCubit extends Cubit<Aparencia> {
         valores.where((v) => v.name == nome).firstOrNull ?? padrao;
     return Aparencia(
       usarTamanhoDoCelular: p.getBool(_kDoCelular) ?? true,
-      escala: porNome(EscalaTexto.values, p.getString(_kEscala), EscalaTexto.normal),
+      escala: porNome(
+          EscalaTexto.values, p.getString(_kEscala), EscalaTexto.normal),
       tema: porNome(ThemeMode.values, p.getString(_kTema), ThemeMode.system),
     );
   }

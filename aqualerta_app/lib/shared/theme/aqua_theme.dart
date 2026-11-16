@@ -33,7 +33,8 @@ abstract class AquaTheme {
     );
 
     final textos = _textos(c);
-    final cantoBotao = RoundedRectangleBorder(borderRadius: BorderRadius.circular(12));
+    final cantoBotao =
+        RoundedRectangleBorder(borderRadius: BorderRadius.circular(12));
 
     return ThemeData(
       useMaterial3: true,
@@ -55,7 +56,8 @@ abstract class AquaTheme {
         centerTitle: false,
         titleTextStyle: textos.titleLarge,
         shape: Border(bottom: BorderSide(color: c.linha)),
-        systemOverlayStyle: escuro ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
+        systemOverlayStyle:
+            escuro ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
       ),
 
       navigationBarTheme: NavigationBarThemeData(
@@ -72,7 +74,8 @@ abstract class AquaTheme {
         }),
         iconTheme: WidgetStateProperty.resolveWith((estados) => IconThemeData(
               size: 22,
-              color: estados.contains(WidgetState.selected) ? c.canal : c.tinta2,
+              color:
+                  estados.contains(WidgetState.selected) ? c.canal : c.tinta2,
             )),
       ),
 
@@ -141,7 +144,8 @@ abstract class AquaTheme {
         fillColor: c.papel,
         hintStyle: textos.bodyLarge!.copyWith(color: c.tinta2),
         labelStyle: textos.bodyLarge!.copyWith(color: c.tinta2),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide(color: c.linha),
@@ -158,7 +162,8 @@ abstract class AquaTheme {
 
       switchTheme: SwitchThemeData(
         thumbColor: WidgetStateProperty.all(c.papel),
-        trackColor: WidgetStateProperty.resolveWith((e) => e.contains(WidgetState.selected) ? c.canal : c.tinta2),
+        trackColor: WidgetStateProperty.resolveWith(
+            (e) => e.contains(WidgetState.selected) ? c.canal : c.tinta2),
         trackOutlineColor: WidgetStateProperty.all(Colors.transparent),
       ),
 
@@ -168,7 +173,9 @@ abstract class AquaTheme {
   }
 
   static TextTheme _textos(AquaColors c) {
-    TextStyle t(double tamanho, FontWeight peso, {Color? cor, double altura = 1.3, double espaco = 0}) => TextStyle(
+    TextStyle t(double tamanho, FontWeight peso,
+            {Color? cor, double altura = 1.3, double espaco = 0}) =>
+        TextStyle(
           fontFamily: fonte,
           fontSize: tamanho,
           fontWeight: peso,

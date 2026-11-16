@@ -16,7 +16,8 @@ import 'package:aqualerta/shared/theme/aqua_theme.dart';
 import 'apoio/dados_exemplo.dart';
 
 /// Monta [tela] num celular de 390 × 844 com os dados de exemplo.
-Future<void> montar(WidgetTester t, Widget tela, {ThemeData? tema, double escala = 1}) async {
+Future<void> montar(WidgetTester t, Widget tela,
+    {ThemeData? tema, double escala = 1}) async {
   SharedPreferences.setMockInitialValues({});
   final prefs = await SharedPreferences.getInstance();
   final painel = PainelCubit(CartaFalsa(), ouvirTempoReal: false);
@@ -32,7 +33,9 @@ Future<void> montar(WidgetTester t, Widget tela, {ThemeData? tema, double escala
       child: MaterialApp(
         theme: tema ?? AquaTheme.claro,
         home: MediaQuery(
-          data: MediaQueryData(size: const Size(390, 844), textScaler: TextScaler.linear(escala)),
+          data: MediaQueryData(
+              size: const Size(390, 844),
+              textScaler: TextScaler.linear(escala)),
           child: tela,
         ),
       ),
@@ -53,9 +56,13 @@ void main() {
   };
 
   for (final escala in [1.0, 1.6]) {
-    for (final tema in [('claro', AquaTheme.claro), ('escuro', AquaTheme.escuro)]) {
+    for (final tema in [
+      ('claro', AquaTheme.claro),
+      ('escuro', AquaTheme.escuro)
+    ]) {
       for (final MapEntry(key: nome, value: tela) in telas.entries) {
-        testWidgets('$nome cabe na tela (${tema.$1}, letra ${escala}x)', (t) async {
+        testWidgets('$nome cabe na tela (${tema.$1}, letra ${escala}x)',
+            (t) async {
           await montar(t, tela, tema: tema.$2, escala: escala);
           expect(t.takeException(), isNull);
         });
@@ -63,13 +70,15 @@ void main() {
     }
   }
 
-  testWidgets('severidade no app segue a régua: Porto Velho aparece como Alto', (t) async {
+  testWidgets('severidade no app segue a régua: Porto Velho aparece como Alto',
+      (t) async {
     await montar(t, const AlertasScreen());
     expect(find.text('Rio Madeira com elevação significativa'), findsOneWidget);
     expect(find.text('Prepare-se'), findsNWidgets(2));
   });
 
-  testWidgets('estação sem leitura recente avisa em vez de mostrar número', (t) async {
+  testWidgets('estação sem leitura recente avisa em vez de mostrar número',
+      (t) async {
     await montar(t, const RiosScreen());
     expect(find.text('Sem leitura recente'), findsOneWidget);
   });

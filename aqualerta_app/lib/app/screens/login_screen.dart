@@ -37,17 +37,21 @@ class _LoginScreenState extends State<LoginScreen> {
     final auth = Supabase.instance.client.auth;
     try {
       if (_criandoConta) {
-        final r = await auth.signUp(email: _email.text.trim(), password: _senha.text);
+        final r =
+            await auth.signUp(email: _email.text.trim(), password: _senha.text);
         if (r.session == null && mounted) {
-          setState(() => _info = 'Conta criada. Confirme pelo link enviado para ${_email.text.trim()} e depois entre.');
+          setState(() => _info =
+              'Conta criada. Confirme pelo link enviado para ${_email.text.trim()} e depois entre.');
         }
       } else {
-        await auth.signInWithPassword(email: _email.text.trim(), password: _senha.text);
+        await auth.signInWithPassword(
+            email: _email.text.trim(), password: _senha.text);
       }
     } on AuthException catch (e) {
       setState(() => _erro = _traduzir(e));
     } catch (_) {
-      setState(() => _erro = 'Sem conexão com o servidor. Confira a internet e tente de novo.');
+      setState(() => _erro =
+          'Sem conexão com o servidor. Confira a internet e tente de novo.');
     } finally {
       if (mounted) setState(() => _enviando = false);
     }
@@ -56,9 +60,12 @@ class _LoginScreenState extends State<LoginScreen> {
   String _traduzir(AuthException e) {
     final m = e.message.toLowerCase();
     if (m.contains('invalid login')) return 'E-mail ou senha incorretos.';
-    if (m.contains('already registered')) return 'Já existe uma conta com esse e-mail. Use "Entrar".';
-    if (m.contains('email not confirmed')) return 'Confirme o e-mail pelo link que enviamos antes de entrar.';
-    if (m.contains('password')) return 'A senha precisa ter pelo menos 6 caracteres.';
+    if (m.contains('already registered'))
+      return 'Já existe uma conta com esse e-mail. Use "Entrar".';
+    if (m.contains('email not confirmed'))
+      return 'Confirme o e-mail pelo link que enviamos antes de entrar.';
+    if (m.contains('password'))
+      return 'A senha precisa ter pelo menos 6 caracteres.';
     return 'Não foi possível ${_criandoConta ? 'criar a conta' : 'entrar'}. Tente de novo.';
   }
 
@@ -87,8 +94,12 @@ class _LoginScreenState extends State<LoginScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('AquaAlerta', style: t.headlineSmall!.copyWith(fontSize: 30)),
-                              Text('Informação que protege', style: t.bodyLarge!.copyWith(color: c.tinta2)),
+                              Text('AquaAlerta',
+                                  style:
+                                      t.headlineSmall!.copyWith(fontSize: 30)),
+                              Text('Informação que protege',
+                                  style:
+                                      t.bodyLarge!.copyWith(color: c.tinta2)),
                             ],
                           ),
                         ),
@@ -106,24 +117,36 @@ class _LoginScreenState extends State<LoginScreen> {
                       autofillHints: const [AutofillHints.email],
                       textInputAction: TextInputAction.next,
                       decoration: const InputDecoration(labelText: 'E-mail'),
-                      validator: (v) => (v == null || !v.contains('@')) ? 'Digite um e-mail válido.' : null,
+                      validator: (v) => (v == null || !v.contains('@'))
+                          ? 'Digite um e-mail válido.'
+                          : null,
                     ),
                     const SizedBox(height: 14),
                     TextFormField(
                       controller: _senha,
                       obscureText: !_senhaVisivel,
-                      autofillHints: [_criandoConta ? AutofillHints.newPassword : AutofillHints.password],
+                      autofillHints: [
+                        _criandoConta
+                            ? AutofillHints.newPassword
+                            : AutofillHints.password
+                      ],
                       onFieldSubmitted: (_) => _enviar(),
                       decoration: InputDecoration(
                         labelText: 'Senha',
                         suffixIcon: IconButton(
-                          tooltip: _senhaVisivel ? 'Esconder senha' : 'Mostrar senha',
-                          icon: Icon(_senhaVisivel ? Icons.visibility_off : Icons.visibility),
-                          onPressed: () => setState(() => _senhaVisivel = !_senhaVisivel),
+                          tooltip: _senhaVisivel
+                              ? 'Esconder senha'
+                              : 'Mostrar senha',
+                          icon: Icon(_senhaVisivel
+                              ? Icons.visibility_off
+                              : Icons.visibility),
+                          onPressed: () =>
+                              setState(() => _senhaVisivel = !_senhaVisivel),
                         ),
                       ),
-                      validator: (v) =>
-                          (v == null || v.length < 6) ? 'A senha precisa ter pelo menos 6 caracteres.' : null,
+                      validator: (v) => (v == null || v.length < 6)
+                          ? 'A senha precisa ter pelo menos 6 caracteres.'
+                          : null,
                     ),
                     if (_erro != null || _info != null) ...[
                       const SizedBox(height: 14),
@@ -132,7 +155,9 @@ class _LoginScreenState extends State<LoginScreen> {
                         child: Text(
                           _erro ?? _info!,
                           style: t.bodyMedium!.copyWith(
-                            color: _erro != null ? c.textoRisco.values.last : c.tinta,
+                            color: _erro != null
+                                ? c.textoRisco.values.last
+                                : c.tinta,
                             fontWeight: FontWeight.w700,
                           ),
                         ),
@@ -145,7 +170,8 @@ class _LoginScreenState extends State<LoginScreen> {
                           ? SizedBox(
                               width: 22,
                               height: 22,
-                              child: CircularProgressIndicator(strokeWidth: 2.5, color: c.sobreCanal))
+                              child: CircularProgressIndicator(
+                                  strokeWidth: 2.5, color: c.sobreCanal))
                           : Text(_criandoConta ? 'Criar conta' : 'Entrar'),
                     ),
                     const SizedBox(height: 8),
@@ -157,7 +183,9 @@ class _LoginScreenState extends State<LoginScreen> {
                                 _erro = null;
                                 _info = null;
                               }),
-                      child: Text(_criandoConta ? 'Já tenho conta: entrar' : 'Não tenho conta: criar agora'),
+                      child: Text(_criandoConta
+                          ? 'Já tenho conta: entrar'
+                          : 'Não tenho conta: criar agora'),
                     ),
                     const SizedBox(height: 24),
                     Text(

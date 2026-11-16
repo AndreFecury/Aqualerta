@@ -29,14 +29,18 @@ void main() {
     expect(formatarTendencia(null), isNull);
   });
 
-  testWidgets('régua na seca mostra o rio muito abaixo do alerta sem quebrar', (t) async {
-    await t.pumpWidget(_app(const Regua(cotas: _manaus, nivel: 16.14, rio: 'Rio Negro')));
-    expect(find.bySemanticsLabel(RegExp(r'16,14 metros.*inundação severa 29')), findsOneWidget);
+  testWidgets('régua na seca mostra o rio muito abaixo do alerta sem quebrar',
+      (t) async {
+    await t.pumpWidget(
+        _app(const Regua(cotas: _manaus, nivel: 16.14, rio: 'Rio Negro')));
+    expect(find.bySemanticsLabel(RegExp(r'16,14 metros.*inundação severa 29')),
+        findsOneWidget);
     expect(t.takeException(), isNull);
   });
 
   testWidgets('régua descreve o nível para leitores de tela', (t) async {
-    await t.pumpWidget(_app(const Regua(cotas: _manaus, nivel: 27.3, rio: 'Rio Negro')));
+    await t.pumpWidget(
+        _app(const Regua(cotas: _manaus, nivel: 27.3, rio: 'Rio Negro')));
     expect(
       find.bySemanticsLabel(RegExp(r'Régua do Rio Negro: 27,30 metros')),
       findsOneWidget,
@@ -44,14 +48,21 @@ void main() {
   });
 
   testWidgets('régua sem leitura avisa que não há dado', (t) async {
-    await t.pumpWidget(_app(const Regua(cotas: _manaus, nivel: null, rio: 'Rio Tapajós', direcao: Axis.horizontal)));
-    expect(find.bySemanticsLabel('Régua do Rio Tapajós: sem leitura recente'), findsOneWidget);
+    await t.pumpWidget(_app(const Regua(
+        cotas: _manaus,
+        nivel: null,
+        rio: 'Rio Tapajós',
+        direcao: Axis.horizontal)));
+    expect(find.bySemanticsLabel('Régua do Rio Tapajós: sem leitura recente'),
+        findsOneWidget);
   });
 
-  testWidgets('selo mostra nome e ação, nos dois temas e com letra grande', (t) async {
+  testWidgets('selo mostra nome e ação, nos dois temas e com letra grande',
+      (t) async {
     for (final tema in [AquaTheme.claro, AquaTheme.escuro]) {
       await t.pumpWidget(_app(
-        const SeloSeveridade(severidade: Severidade.alto, mostrarAcao: true, grande: true),
+        const SeloSeveridade(
+            severidade: Severidade.alto, mostrarAcao: true, grande: true),
         tema: tema,
         escala: 1.6,
       ));

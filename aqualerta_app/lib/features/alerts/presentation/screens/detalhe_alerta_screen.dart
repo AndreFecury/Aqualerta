@@ -49,7 +49,9 @@ class _DetalheAlertaScreenState extends State<DetalheAlertaScreen> {
                 icone: Icons.search_off,
                 titulo: 'Alerta não encontrado',
                 texto: 'Ele pode ter sido encerrado há mais de 90 dias.',
-                acao: FilledButton(onPressed: () => context.go('/alerts'), child: const Text('Ver alertas')),
+                acao: FilledButton(
+                    onPressed: () => context.go('/alerts'),
+                    child: const Text('Ver alertas')),
               ),
       );
     }
@@ -57,9 +59,11 @@ class _DetalheAlertaScreenState extends State<DetalheAlertaScreen> {
     final estacao = alerta.estacao;
     final recente = estacao?.leituraRecente() ?? false;
     final regiao = painel.regiao(alerta.regiaoId);
-    final evento = painel.eventos.where((e) => e.id == alerta.eventoId).firstOrNull;
-    final contornos =
-        (evento?.contornos.isNotEmpty ?? false) ? evento!.contornos : (regiao?.contornos ?? const <List<LatLng>>[]);
+    final evento =
+        painel.eventos.where((e) => e.id == alerta.eventoId).firstOrNull;
+    final contornos = (evento?.contornos.isNotEmpty ?? false)
+        ? evento!.contornos
+        : (regiao?.contornos ?? const <List<LatLng>>[]);
 
     return Scaffold(
       appBar: AppBar(
@@ -82,7 +86,10 @@ class _DetalheAlertaScreenState extends State<DetalheAlertaScreen> {
                 SizedBox(
                     width: 72,
                     height: 340,
-                    child: Regua(cotas: estacao!.cotas!, nivel: recente ? estacao.nivel : null, rio: estacao.titulo)),
+                    child: Regua(
+                        cotas: estacao!.cotas!,
+                        nivel: recente ? estacao.nivel : null,
+                        rio: estacao.titulo)),
                 const SizedBox(width: 16),
               ],
               Expanded(
@@ -93,24 +100,41 @@ class _DetalheAlertaScreenState extends State<DetalheAlertaScreen> {
                     const SizedBox(height: 8),
                     Semantics(
                         header: true,
-                        child:
-                            Text(alerta.ativo ? alerta.severidade.acao : 'Alerta encerrado', style: t.headlineSmall)),
+                        child: Text(
+                            alerta.ativo
+                                ? alerta.severidade.acao
+                                : 'Alerta encerrado',
+                            style: t.headlineSmall)),
                     const SizedBox(height: 8),
                     Text(alerta.titulo, style: t.titleMedium),
                     const SizedBox(height: 4),
                     Text(alerta.texto, style: t.bodyLarge),
                     if (recente && estacao!.cotas != null) ...[
                       const SizedBox(height: 16),
-                      Text(formatarMetros(estacao.nivel!, casas: 2), style: t.displaySmall),
+                      Text(formatarMetros(estacao.nivel!, casas: 2),
+                          style: t.displaySmall),
                       Text(
-                        ['metros na régua', if (estacao.variacao24h != null) formatarTendencia(estacao.variacao24h)!.toLowerCase()].join(', '),
+                        [
+                          'metros na régua',
+                          if (estacao.variacao24h != null)
+                            formatarTendencia(estacao.variacao24h)!
+                                .toLowerCase()
+                        ].join(', '),
                         style: t.bodySmall,
                       ),
                       const SizedBox(height: 8),
-                      Text(_relacao(estacao.nivel! - estacao.cotas!.alerta, 'do alerta'), style: t.bodyLarge),
-                      Text(_relacao(estacao.nivel! - estacao.cotas!.inundacao, 'da inundação'), style: t.bodyLarge),
+                      Text(
+                          _relacao(estacao.nivel! - estacao.cotas!.alerta,
+                              'do alerta'),
+                          style: t.bodyLarge),
+                      Text(
+                          _relacao(estacao.nivel! - estacao.cotas!.inundacao,
+                              'da inundação'),
+                          style: t.bodyLarge),
                       if (estacao.cotas!.severa != null)
-                        Text(_relacao(estacao.nivel! - estacao.cotas!.severa!, 'da inundação severa'),
+                        Text(
+                            _relacao(estacao.nivel! - estacao.cotas!.severa!,
+                                'da inundação severa'),
                             style: t.bodyLarge),
                     ],
                     const SizedBox(height: 12),
@@ -120,7 +144,8 @@ class _DetalheAlertaScreenState extends State<DetalheAlertaScreen> {
                         'Emitido ${formatarDataHora(alerta.emitidoEm)}',
                         if (recente)
                           'Estação ${estacao!.codigoAna} da ANA, leitura de ${formatarDataHora(estacao.lidoEm!)}',
-                        if (estacao?.cotas != null) 'Cotas oficiais do Serviço Geológico do Brasil (SGB)'
+                        if (estacao?.cotas != null)
+                          'Cotas oficiais do Serviço Geológico do Brasil (SGB)'
                         else if (estacao != null)
                           'Estação ${estacao.codigoAna} da ANA sem leitura recente',
                       ].join('\n'),
@@ -147,8 +172,10 @@ class _DetalheAlertaScreenState extends State<DetalheAlertaScreen> {
                 contentPadding: EdgeInsets.zero,
                 controlAffinity: ListTileControlAffinity.leading,
                 value: _feitas.contains(i),
-                onChanged: (v) => setState(() => v == true ? _feitas.add(i) : _feitas.remove(i)),
-                title: Text(_acoes[i], style: t.bodyLarge!.copyWith(fontSize: 16)),
+                onChanged: (v) => setState(
+                    () => v == true ? _feitas.add(i) : _feitas.remove(i)),
+                title:
+                    Text(_acoes[i], style: t.bodyLarge!.copyWith(fontSize: 16)),
                 shape: Border(bottom: BorderSide(color: c.linha)),
               ),
           ],
@@ -157,7 +184,10 @@ class _DetalheAlertaScreenState extends State<DetalheAlertaScreen> {
             const TituloSecao('Área afetada'),
             ClipRRect(
               borderRadius: BorderRadius.circular(4),
-              child: SizedBox(height: 200, child: _MiniCarta(contornos: contornos, cor: c.corDe(alerta.severidade))),
+              child: SizedBox(
+                  height: 200,
+                  child: _MiniCarta(
+                      contornos: contornos, cor: c.corDe(alerta.severidade))),
             ),
             const SizedBox(height: 6),
             Text(
@@ -174,18 +204,22 @@ class _DetalheAlertaScreenState extends State<DetalheAlertaScreen> {
             label: const Text('Ligar para a Defesa Civil, 199'),
           ),
           const SizedBox(height: 10),
-          OutlinedButton(onPressed: () => _compartilhar(alerta), child: const Text('Enviar para a família')),
+          OutlinedButton(
+              onPressed: () => _compartilhar(alerta),
+              child: const Text('Enviar para a família')),
         ],
       ),
     );
   }
 
-  String _relacao(double dif, String referencia) =>
-      dif >= 0 ? '${formatarDiferenca(dif)} acima $referencia' : '${formatarDiferenca(dif)} abaixo $referencia';
+  String _relacao(double dif, String referencia) => dif >= 0
+      ? '${formatarDiferenca(dif)} acima $referencia'
+      : '${formatarDiferenca(dif)} abaixo $referencia';
 
   void _compartilhar(AlertaV3 a) {
     final texto = StringBuffer()
-      ..writeln('AquaAlerta: ${a.severidade.acao} (risco ${a.severidade.rotulo.toLowerCase()})')
+      ..writeln(
+          'AquaAlerta: ${a.severidade.acao} (risco ${a.severidade.rotulo.toLowerCase()})')
       ..writeln('${a.titulo} - ${a.regiaoNome}')
       ..writeln(a.texto)
       ..write('Em caso de emergência, ligue 199 (Defesa Civil).');
@@ -206,21 +240,31 @@ class _MiniCarta extends StatelessWidget {
       label: 'Mapa da área afetada',
       child: FlutterMap(
         options: MapOptions(
-          initialCameraFit:
-              CameraFit.bounds(bounds: LatLngBounds.fromPoints(pontos), padding: const EdgeInsets.all(20)),
-          interactionOptions: const InteractionOptions(flags: InteractiveFlag.none),
+          initialCameraFit: CameraFit.bounds(
+              bounds: LatLngBounds.fromPoints(pontos),
+              padding: const EdgeInsets.all(20)),
+          interactionOptions:
+              const InteractionOptions(flags: InteractiveFlag.none),
           backgroundColor: AquaColors.of(context).fundo,
         ),
         children: [
           if (!FundoMapa.desligado)
-            TileLayer(urlTemplate: fundo.url, subdomains: fundo.subdominios, userAgentPackageName: 'br.com.aqualerta'),
+            TileLayer(
+                urlTemplate: fundo.url,
+                subdomains: fundo.subdominios,
+                userAgentPackageName: 'br.com.aqualerta'),
           PolygonLayer(polygons: [
             for (final a in contornos)
               if (a.length >= 3)
-                Polygon(points: a, color: cor.withValues(alpha: 0.3), borderColor: cor, borderStrokeWidth: 2.5),
+                Polygon(
+                    points: a,
+                    color: cor.withValues(alpha: 0.3),
+                    borderColor: cor,
+                    borderStrokeWidth: 2.5),
           ]),
           RichAttributionWidget(
-              showFlutterMapAttribution: false, attributions: [TextSourceAttribution(fundo.atribuicao)]),
+              showFlutterMapAttribution: false,
+              attributions: [TextSourceAttribution(fundo.atribuicao)]),
         ],
       ),
     );

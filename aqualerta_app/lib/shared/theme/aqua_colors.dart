@@ -68,7 +68,8 @@ class AquaColors extends ThemeExtension<AquaColors> {
   Color corDe(Severidade s) => risco[s]!;
   Color textoDe(Severidade s) => textoRisco[s]!;
 
-  static AquaColors of(BuildContext context) => Theme.of(context).extension<AquaColors>()!;
+  static AquaColors of(BuildContext context) =>
+      Theme.of(context).extension<AquaColors>()!;
 
   static const claro = AquaColors(
     fundo: Color(0xFFEDF0EA),
@@ -171,7 +172,8 @@ class AquaColors extends ThemeExtension<AquaColors> {
   AquaColors lerp(ThemeExtension<AquaColors>? other, double t) {
     if (other is! AquaColors) return this;
     Color l(Color a, Color b) => Color.lerp(a, b, t)!;
-    Map<Severidade, Color> lm(Map<Severidade, Color> a, Map<Severidade, Color> b) =>
+    Map<Severidade, Color> lm(
+            Map<Severidade, Color> a, Map<Severidade, Color> b) =>
         {for (final s in Severidade.values) s: l(a[s]!, b[s]!)};
     return AquaColors(
       fundo: l(fundo, other.fundo),

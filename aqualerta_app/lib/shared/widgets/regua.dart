@@ -43,7 +43,8 @@ class Regua extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cores = AquaColors.of(context);
-    final estilo = Theme.of(context).textTheme.labelSmall!.copyWith(color: cores.tinta);
+    final estilo =
+        Theme.of(context).textTheme.labelSmall!.copyWith(color: cores.tinta);
     return Semantics(
       label: _descricao(),
       image: true,
@@ -87,9 +88,14 @@ class _ReguaPainter extends CustomPainter {
   // Faixa da escala: do nível atual (ou de 4 m abaixo do alerta, se o rio
   // estiver mais alto) até um pouco acima da cota mais alta. Na seca o rio
   // fica muitos metros abaixo do alerta, e a régua precisa mostrar isso.
-  double get _base => [nivel ?? cotas.alerta, cotas.alerta - 4].reduce((a, b) => a < b ? a : b);
-  double get _min => vertical ? (_base - 1).floorToDouble() : _base - (cotas.topo - _base) * 0.08;
-  double get _max => vertical ? (cotas.topo + 0.5).ceilToDouble() : cotas.topo + (cotas.topo - _base) * 0.05;
+  double get _base =>
+      [nivel ?? cotas.alerta, cotas.alerta - 4].reduce((a, b) => a < b ? a : b);
+  double get _min => vertical
+      ? (_base - 1).floorToDouble()
+      : _base - (cotas.topo - _base) * 0.08;
+  double get _max => vertical
+      ? (cotas.topo + 0.5).ceilToDouble()
+      : cotas.topo + (cotas.topo - _base) * 0.05;
 
   // Com a escala longa (rio na seca), números a cada 2 m e marcas a cada 1 m.
   double get _passoNumero => (_max - _min) > 14 ? 2 : 1;
@@ -99,12 +105,15 @@ class _ReguaPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     const margem = 12.0;
     final corpo = Offset.zero & size;
-    final rr = RRect.fromRectAndRadius(corpo.deflate(0.5), const Radius.circular(4));
+    final rr =
+        RRect.fromRectAndRadius(corpo.deflate(0.5), const Radius.circular(4));
 
     // Posição de um valor em metros ao longo da régua.
     double pos(double v) {
       final t = ((v - _min) / (_max - _min)).clamp(0.0, 1.0);
-      return vertical ? size.height - margem - t * (size.height - 2 * margem) : t * size.width;
+      return vertical
+          ? size.height - margem - t * (size.height - 2 * margem)
+          : t * size.width;
     }
 
     canvas.drawRRect(rr, Paint()..color = cores.papel);
@@ -113,10 +122,13 @@ class _ReguaPainter extends CustomPainter {
       _hachuraVazia(canvas, rr);
     } else {
       final p = pos(nivel!);
-      final agua = vertical ? Rect.fromLTRB(0, p, size.width, size.height) : Rect.fromLTRB(0, 0, p, size.height);
+      final agua = vertical
+          ? Rect.fromLTRB(0, p, size.width, size.height)
+          : Rect.fromLTRB(0, 0, p, size.height);
       canvas.save();
       canvas.clipRRect(rr);
-      canvas.drawRect(agua, Paint()..color = cores.aguaFunda.withValues(alpha: 0.75));
+      canvas.drawRect(
+          agua, Paint()..color = cores.aguaFunda.withValues(alpha: 0.75));
       canvas.restore();
     }
 
@@ -130,9 +142,12 @@ class _ReguaPainter extends CustomPainter {
     if (vertical) {
       for (var v = _min; v <= _max + 1e-6; v += _passoMarca) {
         final y = pos(v);
-        final inteiro = (v / _passoNumero - (v / _passoNumero).roundToDouble()).abs() < 1e-6;
+        final inteiro =
+            (v / _passoNumero - (v / _passoNumero).roundToDouble()).abs() <
+                1e-6;
         final comprimento = size.width * (inteiro ? 0.42 : 0.22);
-        canvas.drawLine(Offset(size.width - comprimento, y), Offset(size.width, y), inteiro ? maior : menor);
+        canvas.drawLine(Offset(size.width - comprimento, y),
+            Offset(size.width, y), inteiro ? maior : menor);
         if (inteiro && mostrarNumeros) {
           final tp = TextPainter(
             text: TextSpan(text: v.round().toString(), style: estiloNumero),
@@ -147,7 +162,8 @@ class _ReguaPainter extends CustomPainter {
         final x = 1 + (size.width - 2) * i / 40;
         final grande = i % 4 == 0;
         final comprimento = grande ? 10.0 : 5.0;
-        canvas.drawLine(Offset(x, size.height - 1 - comprimento), Offset(x, size.height - 1), grande ? maior : menor);
+        canvas.drawLine(Offset(x, size.height - 1 - comprimento),
+            Offset(x, size.height - 1), grande ? maior : menor);
       }
     }
 
@@ -162,7 +178,8 @@ class _ReguaPainter extends CustomPainter {
     for (final (valor, cor) in [
       (cotas.alerta, cores.corDe(Severidade.medio)),
       (cotas.inundacao, cores.corDe(Severidade.alto)),
-      if (cotas.severa != null) (cotas.severa!, cores.corDe(Severidade.critico)),
+      if (cotas.severa != null)
+        (cotas.severa!, cores.corDe(Severidade.critico)),
     ]) {
       final p = pos(valor);
       final linha = Path();
@@ -209,7 +226,8 @@ class _ReguaPainter extends CustomPainter {
     final r = rr.outerRect;
     final d = r.width + r.height;
     for (var i = -d; i < d; i += 6) {
-      canvas.drawLine(Offset(r.left + i, r.bottom), Offset(r.left + i + r.height, r.top), listra);
+      canvas.drawLine(Offset(r.left + i, r.bottom),
+          Offset(r.left + i + r.height, r.top), listra);
     }
     canvas.restore();
   }

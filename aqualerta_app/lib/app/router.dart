@@ -36,16 +36,29 @@ final router = GoRouter(
         child: _OuvinteAvisos(child: _Abas(child: child)),
       ),
       routes: [
-        GoRoute(path: '/map', pageBuilder: (_, __) => const NoTransitionPage(child: MapaScreen())),
+        GoRoute(
+            path: '/map',
+            pageBuilder: (_, __) =>
+                const NoTransitionPage(child: MapaScreen())),
         GoRoute(
           path: '/alerts',
-          pageBuilder: (_, __) => const NoTransitionPage(child: AlertasScreen()),
+          pageBuilder: (_, __) =>
+              const NoTransitionPage(child: AlertasScreen()),
           routes: [
-            GoRoute(path: ':id', builder: (_, s) => DetalheAlertaScreen(alertaId: s.pathParameters['id']!)),
+            GoRoute(
+                path: ':id',
+                builder: (_, s) =>
+                    DetalheAlertaScreen(alertaId: s.pathParameters['id']!)),
           ],
         ),
-        GoRoute(path: '/rios', pageBuilder: (_, __) => const NoTransitionPage(child: RiosScreen())),
-        GoRoute(path: '/perfil', pageBuilder: (_, __) => const NoTransitionPage(child: PerfilScreen())),
+        GoRoute(
+            path: '/rios',
+            pageBuilder: (_, __) =>
+                const NoTransitionPage(child: RiosScreen())),
+        GoRoute(
+            path: '/perfil',
+            pageBuilder: (_, __) =>
+                const NoTransitionPage(child: PerfilScreen())),
         // Endereços antigos continuam funcionando.
         GoRoute(path: '/regions', redirect: (_, __) => '/rios'),
         GoRoute(path: '/settings', redirect: (_, __) => '/perfil'),
@@ -63,8 +76,10 @@ class _Abas extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final local = GoRouterState.of(context).uri.path;
-    final indice = _rotas.indexWhere(local.startsWith).clamp(0, _rotas.length - 1);
-    final ativos = context.select<PainelCubit, int>((c) => c.state.ativos.length);
+    final indice =
+        _rotas.indexWhere(local.startsWith).clamp(0, _rotas.length - 1);
+    final ativos =
+        context.select<PainelCubit, int>((c) => c.state.ativos.length);
 
     return Scaffold(
       body: child,
@@ -72,18 +87,28 @@ class _Abas extends StatelessWidget {
         selectedIndex: indice,
         onDestinationSelected: (i) => context.go(_rotas[i]),
         destinations: [
-          const NavigationDestination(icon: Icon(Icons.map_outlined), selectedIcon: Icon(Icons.map), label: 'Mapa'),
+          const NavigationDestination(
+              icon: Icon(Icons.map_outlined),
+              selectedIcon: Icon(Icons.map),
+              label: 'Mapa'),
           NavigationDestination(
             icon: Badge(
-                isLabelVisible: ativos > 0, label: Text('$ativos'), child: const Icon(Icons.notifications_outlined)),
-            selectedIcon:
-                Badge(isLabelVisible: ativos > 0, label: Text('$ativos'), child: const Icon(Icons.notifications)),
+                isLabelVisible: ativos > 0,
+                label: Text('$ativos'),
+                child: const Icon(Icons.notifications_outlined)),
+            selectedIcon: Badge(
+                isLabelVisible: ativos > 0,
+                label: Text('$ativos'),
+                child: const Icon(Icons.notifications)),
             label: 'Alertas',
             tooltip: ativos > 0 ? 'Alertas: $ativos ativos' : 'Alertas',
           ),
-          const NavigationDestination(icon: Icon(Icons.straighten), label: 'Rios'),
           const NavigationDestination(
-              icon: Icon(Icons.person_outline), selectedIcon: Icon(Icons.person), label: 'Perfil'),
+              icon: Icon(Icons.straighten), label: 'Rios'),
+          const NavigationDestination(
+              icon: Icon(Icons.person_outline),
+              selectedIcon: Icon(Icons.person),
+              label: 'Perfil'),
         ],
       ),
     );
@@ -106,7 +131,8 @@ class _OuvinteAvisosState extends State<_OuvinteAvisos> {
   @override
   Widget build(BuildContext context) {
     return BlocListener<PainelCubit, Painel>(
-      listenWhen: (antes, depois) => depois.temDados && antes.alertas != depois.alertas,
+      listenWhen: (antes, depois) =>
+          depois.temDados && antes.alertas != depois.alertas,
       listener: (context, painel) {
         final ativos = painel.ativos;
         if (_vistos == null) {

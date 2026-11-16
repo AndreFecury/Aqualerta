@@ -28,7 +28,8 @@ class RiosScreen extends StatelessWidget {
     return Scaffold(
       body: Column(
         children: [
-          const CabecalhoTela(titulo: 'Rios', subtitulo: 'Nível agora nas estações da ANA'),
+          const CabecalhoTela(
+              titulo: 'Rios', subtitulo: 'Nível agora nas estações da ANA'),
           if (painel.erro != null)
             FaixaAviso(
                 texto: painel.erro!,
@@ -41,18 +42,22 @@ class RiosScreen extends StatelessWidget {
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
                 children: [
-                  if (painel.carregando && !painel.temDados) const LinearProgressIndicator(),
+                  if (painel.carregando && !painel.temDados)
+                    const LinearProgressIndicator(),
                   const _Legenda(),
                   if (!painel.carregando && estacoes.isEmpty)
                     const EstadoVazio(
                       icone: Icons.straighten,
                       titulo: 'Leituras indisponíveis',
-                      texto: 'As leituras das estações ainda não chegaram. Puxe para baixo para tentar de novo.',
+                      texto:
+                          'As leituras das estações ainda não chegaram. Puxe para baixo para tentar de novo.',
                     ),
-                  for (final (i, e) in estacoes.indexed) _LinhaEstacao(estacao: e, ultima: i == estacoes.length - 1),
+                  for (final (i, e) in estacoes.indexed)
+                    _LinhaEstacao(estacao: e, ultima: i == estacoes.length - 1),
                   const SizedBox(height: 28),
                   const TituloSecao('Regiões que você segue'),
-                  Text('Você recebe avisos das regiões marcadas.', style: t.bodySmall),
+                  Text('Você recebe avisos das regiões marcadas.',
+                      style: t.bodySmall),
                   const SizedBox(height: 10),
                   Wrap(
                     spacing: 8,
@@ -61,13 +66,22 @@ class RiosScreen extends StatelessWidget {
                       for (final r in painel.regioes)
                         FilterChip(
                           label: Text(r.nome),
-                          labelStyle: t.labelLarge!.copyWith(color: c.tinta, fontSize: 15),
-                          avatar: AmostraHachura(severidade: painel.severidadeDaRegiao(r.id), tamanho: 16),
+                          labelStyle: t.labelLarge!
+                              .copyWith(color: c.tinta, fontSize: 15),
+                          avatar: AmostraHachura(
+                              severidade: painel.severidadeDaRegiao(r.id),
+                              tamanho: 16),
                           selected: painel.seguidas.contains(r.id),
                           showCheckmark: false,
                           selectedColor: c.canal.withValues(alpha: 0.16),
-                          side: BorderSide(color: painel.seguidas.contains(r.id) ? c.canal : c.linha, width: 1.5),
-                          onSelected: (v) => context.read<PainelCubit>().seguir(r.id, seguir: v),
+                          side: BorderSide(
+                              color: painel.seguidas.contains(r.id)
+                                  ? c.canal
+                                  : c.linha,
+                              width: 1.5),
+                          onSelected: (v) => context
+                              .read<PainelCubit>()
+                              .seguir(r.id, seguir: v),
                         ),
                     ],
                   ),
@@ -91,7 +105,10 @@ class _Legenda extends StatelessWidget {
     Widget item(Color cor, String texto, {bool tracejado = true}) => Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(width: 3, height: 16, color: tracejado ? cor.withValues(alpha: 0.9) : cor),
+            Container(
+                width: 3,
+                height: 16,
+                color: tracejado ? cor.withValues(alpha: 0.9) : cor),
             const SizedBox(width: 6),
             Flexible(child: Text(texto, style: t.bodySmall)),
           ],
@@ -140,7 +157,8 @@ class _LinhaEstacao extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 16),
-      decoration: BoxDecoration(border: ultima ? null : Border(bottom: BorderSide(color: c.linha))),
+      decoration: BoxDecoration(
+          border: ultima ? null : Border(bottom: BorderSide(color: c.linha))),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -156,16 +174,20 @@ class _LinhaEstacao extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(estacao.titulo, style: t.titleMedium),
-                    Text(estacao.nome, style: t.bodyMedium!.copyWith(color: c.tinta2)),
+                    Text(estacao.nome,
+                        style: t.bodyMedium!.copyWith(color: c.tinta2)),
                   ],
                 ),
                 if (recente)
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      Text('${formatarMetros(estacao.nivel!, casas: 2)} m', style: t.titleLarge),
+                      Text('${formatarMetros(estacao.nivel!, casas: 2)} m',
+                          style: t.titleLarge),
                       if (situacao != null)
-                        Text(situacao, style: t.labelSmall!.copyWith(color: s == null ? c.tinta2 : c.textoDe(s))),
+                        Text(situacao,
+                            style: t.labelSmall!.copyWith(
+                                color: s == null ? c.tinta2 : c.textoDe(s))),
                     ],
                   )
                 else
@@ -175,13 +197,18 @@ class _LinhaEstacao extends StatelessWidget {
           ),
           if (cotas != null) ...[
             const SizedBox(height: 10),
-            Regua(cotas: cotas, nivel: recente ? estacao.nivel : null, rio: estacao.titulo, direcao: Axis.horizontal),
+            Regua(
+                cotas: cotas,
+                nivel: recente ? estacao.nivel : null,
+                rio: estacao.titulo,
+                direcao: Axis.horizontal),
             const SizedBox(height: 8),
             Text(
               [
                 'Alerta ${formatarMetros(cotas.alerta, casas: 2)} m, inundação ${formatarMetros(cotas.inundacao, casas: 2)} m'
                     '${cotas.severa == null ? '' : ', severa ${formatarMetros(cotas.severa!, casas: 2)} m'}.',
-                if (recente && estacao.variacao24h != null) '${formatarTendencia(estacao.variacao24h)}.',
+                if (recente && estacao.variacao24h != null)
+                  '${formatarTendencia(estacao.variacao24h)}.',
                 if (recente) 'Leitura ${formatarHaQuanto(estacao.lidoEm!)}.',
               ].join(' '),
               style: t.bodySmall,

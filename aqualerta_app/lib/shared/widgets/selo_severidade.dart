@@ -24,9 +24,11 @@ class SeloSeveridade extends StatelessWidget {
   Widget build(BuildContext context) {
     final cores = AquaColors.of(context);
     final textos = Theme.of(context).textTheme;
-    final texto = mostrarAcao ? severidade.acao : 'Risco ${severidade.rotulo.toLowerCase()}';
-    final estilo = (grande ? textos.titleMedium : textos.labelSmall)!
-        .copyWith(color: cores.textoDe(severidade), fontWeight: FontWeight.w700);
+    final texto = mostrarAcao
+        ? severidade.acao
+        : 'Risco ${severidade.rotulo.toLowerCase()}';
+    final estilo = (grande ? textos.titleMedium : textos.labelSmall)!.copyWith(
+        color: cores.textoDe(severidade), fontWeight: FontWeight.w700);
 
     return Semantics(
       label: 'Risco ${severidade.rotulo.toLowerCase()}: ${severidade.acao}',

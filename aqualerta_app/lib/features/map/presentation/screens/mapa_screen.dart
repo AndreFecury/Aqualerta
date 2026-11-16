@@ -20,6 +20,9 @@ import 'package:aqualerta/shared/widgets/v3.dart';
 /// Manaus: ponto inicial do mapa.
 const _manaus = LatLng(-3.119, -60.021);
 
+/// Parte da altura que o cartão ocupa fechado; o mapa deixa essa faixa livre.
+const _alturaMinima = 0.2;
+
 class MapaScreen extends StatefulWidget {
   const MapaScreen({super.key});
 
@@ -51,10 +54,14 @@ class _MapaScreenState extends State<MapaScreen> {
         .replaceAll('ç', 'c');
     final q = norm(texto.trim());
     if (q.isEmpty) return;
-    final achada = p.regioes.where((r) => norm(r.nome).contains(q) || norm(r.municipio ?? '').contains(q)).firstOrNull;
+    final achada = p.regioes
+        .where((r) =>
+            norm(r.nome).contains(q) || norm(r.municipio ?? '').contains(q))
+        .firstOrNull;
     if (achada == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Nenhuma região monitorada com o nome "$texto".')),
+        SnackBar(
+            content: Text('Nenhuma região monitorada com o nome "$texto".')),
       );
       return;
     }
@@ -66,10 +73,13 @@ class _MapaScreenState extends State<MapaScreen> {
     final aviso = ScaffoldMessenger.of(context);
     try {
       var permissao = await Geolocator.checkPermission();
-      if (permissao == LocationPermission.denied) permissao = await Geolocator.requestPermission();
-      if (permissao == LocationPermission.denied || permissao == LocationPermission.deniedForever) {
+      if (permissao == LocationPermission.denied)
+        permissao = await Geolocator.requestPermission();
+      if (permissao == LocationPermission.denied ||
+          permissao == LocationPermission.deniedForever) {
         aviso.showSnackBar(const SnackBar(
-            content: Text('Sem permissão de localização. Você pode liberar nas configurações do celular.')));
+            content: Text(
+                'Sem permissão de localização. Você pode liberar nas configurações do celular.')));
         return;
       }
       final pos = await Geolocator.getCurrentPosition();
@@ -77,7 +87,8 @@ class _MapaScreenState extends State<MapaScreen> {
       setState(() => _minhaPosicao = aqui);
       _mapa.move(aqui, 13);
     } catch (_) {
-      aviso.showSnackBar(const SnackBar(content: Text('Não foi possível obter sua localização agora.')));
+      aviso.showSnackBar(const SnackBar(
+          content: Text('Não foi possível obter sua localização agora.')));
     }
   }
 
@@ -89,8 +100,10 @@ class _MapaScreenState extends State<MapaScreen> {
     final brilho = Theme.of(context).brightness;
     final fundo = FundoMapa.para(exibicao.tipo, brilho);
 
-    final regiao =
-        (_regiaoSelecionadaId != null ? painel.regiao(_regiaoSelecionadaId!) : null) ?? painel.regiaoPrincipal;
+    final regiao = (_regiaoSelecionadaId != null
+            ? painel.regiao(_regiaoSelecionadaId!)
+            : null) ??
+        painel.regiaoPrincipal;
     final estacao = painel.estacaoDaRegiao(regiao);
 
     return Scaffold(
@@ -106,160 +119,202 @@ class _MapaScreenState extends State<MapaScreen> {
                   aoTocar: context.read<PainelCubit>().carregar),
             ),
           Expanded(
-            child: Stack(
-              children: [
-                FlutterMap(
-                  mapController: _mapa,
-                  options: MapOptions(
-                    initialCenter: regiao?.centro ?? _manaus,
-                    initialZoom: 11,
-                    minZoom: 4,
-                    maxZoom: fundo.zoomMaximo.toDouble(),
-                    backgroundColor: c.fundo,
-                    interactionOptions: const InteractionOptions(flags: InteractiveFlag.all & ~InteractiveFlag.rotate),
-                  ),
-                  children: [
-                    if (!FundoMapa.desligado)
-                      TileLayer(
-                        urlTemplate: fundo.url,
-                        subdomains: fundo.subdominios,
-                        retinaMode: fundo.retina && RetinaMode.isHighDensity(context),
-                        maxNativeZoom: fundo.zoomMaximo,
-                        userAgentPackageName: 'br.com.aqualerta',
-                      ),
-                    if (exibicao.mostra(Camada.areasAlagadas))
-                      PolygonLayer(polygons: [
-                        for (final e in painel.eventos)
-                          for (final anel in e.contornos)
-                            if (anel.length >= 3)
-                              Polygon(
-                                points: anel,
-                                color: c.corDe(e.severidade).withValues(alpha: 0.28),
-                                borderColor: c.corDe(e.severidade),
-                                borderStrokeWidth: 2.5,
-                              ),
-                      ]),
-                    if (exibicao.mostra(Camada.regioes))
-                      PolygonLayer(polygons: [
-                        for (final r in painel.regioes)
-                          for (final anel in r.contornos)
-                            if (anel.length >= 3)
-                              Polygon(
-                                points: anel,
-                                color: c.corDe(painel.severidadeDaRegiao(r.id)).withValues(alpha: 0.06),
-                                borderColor: c.corDe(painel.severidadeDaRegiao(r.id)),
-                                borderStrokeWidth: r.id == regiao?.id ? 3 : 1.8,
-                                pattern: painel.severidadeDaRegiao(r.id) == Severidade.baixo
-                                    ? StrokePattern.dashed(segments: const [8, 4])
-                                    : const StrokePattern.solid(),
-                              ),
-                      ]),
-                    MarkerLayer(markers: [
-                      if (exibicao.mostra(Camada.regioes))
-                        for (final r in painel.regioes)
-                          if (r.centro != null)
-                            Marker(
-                              point: r.centro!,
-                              width: 48,
-                              height: 48,
-                              child: _MarcaRegiao(
-                                regiao: r,
-                                severidade: painel.severidadeDaRegiao(r.id),
-                                selecionada: r.id == regiao?.id,
-                                aoTocar: () => setState(() => _regiaoSelecionadaId = r.id),
-                              ),
+            child: LayoutBuilder(
+                builder: (context, caixa) => Stack(
+                      children: [
+                        Padding(
+                          padding: EdgeInsets.only(
+                              bottom: caixa.maxHeight * _alturaMinima),
+                          child: FlutterMap(
+                            mapController: _mapa,
+                            options: MapOptions(
+                              initialCenter: regiao?.centro ?? _manaus,
+                              initialZoom: 11,
+                              minZoom: 4,
+                              maxZoom: fundo.zoomMaximo.toDouble(),
+                              backgroundColor: c.fundo,
+                              interactionOptions: const InteractionOptions(
+                                  flags: InteractiveFlag.all &
+                                      ~InteractiveFlag.rotate),
+                              onTap: (_, ponto) {
+                                final achada =
+                                    regiaoNoPonto(ponto, painel.regioes);
+                                if (achada != null)
+                                  setState(
+                                      () => _regiaoSelecionadaId = achada.id);
+                              },
                             ),
-                      if (exibicao.mostra(Camada.estacoes))
-                        for (final e in painel.estacoes)
-                          if (e.posicao != null)
-                            Marker(point: e.posicao!, width: 120, height: 36, child: _MarcaEstacao(estacao: e)),
-                      if (exibicao.mostra(Camada.minhaLocalizacao) && _minhaPosicao != null)
-                        Marker(
-                          point: _minhaPosicao!,
-                          width: 40,
-                          height: 40,
-                          child: Semantics(
-                            label: 'Você está aqui',
-                            child: Container(
-                              decoration: BoxDecoration(shape: BoxShape.circle, color: c.canal.withValues(alpha: 0.18)),
-                              alignment: Alignment.center,
-                              child: Container(
-                                width: 16,
-                                height: 16,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: c.canal,
-                                  border: Border.all(color: Colors.white, width: 3),
+                            children: [
+                              if (!FundoMapa.desligado)
+                                TileLayer(
+                                  urlTemplate: fundo.url,
+                                  subdomains: fundo.subdominios,
+                                  retinaMode: fundo.retina &&
+                                      RetinaMode.isHighDensity(context),
+                                  maxNativeZoom: fundo.zoomMaximo,
+                                  userAgentPackageName: 'br.com.aqualerta',
                                 ),
+                              if (!FundoMapa.desligado &&
+                                  fundo.sobreposicao != null)
+                                TileLayer(
+                                  urlTemplate: fundo.sobreposicao!.url,
+                                  subdomains: fundo.sobreposicao!.subdominios,
+                                  retinaMode: fundo.sobreposicao!.retina &&
+                                      RetinaMode.isHighDensity(context),
+                                  userAgentPackageName: 'br.com.aqualerta',
+                                ),
+                              if (exibicao.mostra(Camada.areasAlagadas))
+                                PolygonLayer(polygons: [
+                                  for (final e in painel.eventos)
+                                    for (final anel in e.contornos)
+                                      if (anel.length >= 3)
+                                        Polygon(
+                                          points: anel,
+                                          color: c
+                                              .corDe(e.severidade)
+                                              .withValues(alpha: 0.28),
+                                          borderColor: c.corDe(e.severidade),
+                                          borderStrokeWidth: 2.5,
+                                        ),
+                                ]),
+                              if (exibicao.mostra(Camada.regioes))
+                                PolygonLayer(polygons: [
+                                  for (final r in painel.regioes)
+                                    for (final anel in r.contornos)
+                                      if (anel.length >= 3)
+                                        Polygon(
+                                          points: anel,
+                                          color: c
+                                              .corDe(painel
+                                                  .severidadeDaRegiao(r.id))
+                                              .withValues(alpha: 0.06),
+                                          borderColor: c.corDe(
+                                              painel.severidadeDaRegiao(r.id)),
+                                          borderStrokeWidth:
+                                              r.id == regiao?.id ? 3 : 1.8,
+                                          pattern:
+                                              painel.severidadeDaRegiao(r.id) ==
+                                                      Severidade.baixo
+                                                  ? StrokePattern.dashed(
+                                                      segments: const [8, 4])
+                                                  : const StrokePattern.solid(),
+                                        ),
+                                ]),
+                              MarkerLayer(markers: [
+                                if (exibicao.mostra(Camada.regioes))
+                                  for (final r in painel.regioes)
+                                    if (r.centro != null)
+                                      Marker(
+                                        point: r.centro!,
+                                        width: 124,
+                                        height: 40,
+                                        child: _MarcaRegiao(
+                                          regiao: r,
+                                          severidade:
+                                              painel.severidadeDaRegiao(r.id),
+                                          estacao:
+                                              exibicao.mostra(Camada.estacoes)
+                                                  ? painel.estacaoDaRegiao(r)
+                                                  : null,
+                                          selecionada: r.id == regiao?.id,
+                                          aoTocar: () => setState(() =>
+                                              _regiaoSelecionadaId = r.id),
+                                        ),
+                                      ),
+                                // Estações que não têm região perto: marcador próprio, com gota.
+                                if (exibicao.mostra(Camada.estacoes))
+                                  for (final e in painel.estacoes)
+                                    if (e.posicao != null &&
+                                        !(exibicao.mostra(Camada.regioes) &&
+                                            painel.regioes.any((r) =>
+                                                painel.estacaoDaRegiao(r)?.id ==
+                                                    e.id &&
+                                                r.centro != null)))
+                                      Marker(
+                                          point: e.posicao!,
+                                          width: 124,
+                                          height: 36,
+                                          child: _MarcaEstacao(estacao: e)),
+                                if (exibicao.mostra(Camada.minhaLocalizacao) &&
+                                    _minhaPosicao != null)
+                                  Marker(
+                                    point: _minhaPosicao!,
+                                    width: 40,
+                                    height: 40,
+                                    child: Semantics(
+                                      label: 'Você está aqui',
+                                      child: Container(
+                                        decoration: BoxDecoration(
+                                            shape: BoxShape.circle,
+                                            color: c.canal
+                                                .withValues(alpha: 0.18)),
+                                        alignment: Alignment.center,
+                                        child: Container(
+                                          width: 16,
+                                          height: 16,
+                                          decoration: BoxDecoration(
+                                            shape: BoxShape.circle,
+                                            color: c.canal,
+                                            border: Border.all(
+                                                color: Colors.white, width: 3),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                              ]),
+                              RichAttributionWidget(
+                                alignment: AttributionAlignment.bottomLeft,
+                                showFlutterMapAttribution: false,
+                                attributions: [
+                                  TextSourceAttribution(fundo.atribuicao)
+                                ],
                               ),
+                            ],
+                          ),
+                        ),
+                        // Busca
+                        Positioned(
+                          top: MediaQuery.paddingOf(context).top +
+                              (painel.erro != null ? 0 : 12),
+                          left: 12,
+                          right: 12,
+                          child: TextField(
+                            controller: _busca,
+                            textInputAction: TextInputAction.search,
+                            onSubmitted: (t) => _buscar(painel, t),
+                            decoration: InputDecoration(
+                              hintText: 'Buscar bairro ou região',
+                              prefixIcon: Icon(Icons.search, color: c.tinta2),
                             ),
                           ),
                         ),
-                    ]),
-                    RichAttributionWidget(
-                      alignment: AttributionAlignment.bottomLeft,
-                      showFlutterMapAttribution: false,
-                      attributions: [TextSourceAttribution(fundo.atribuicao)],
-                    ),
-                  ],
-                ),
-                // Busca
-                Positioned(
-                  top: MediaQuery.paddingOf(context).top + (painel.erro != null ? 0 : 12),
-                  left: 12,
-                  right: 12,
-                  child: TextField(
-                    controller: _busca,
-                    textInputAction: TextInputAction.search,
-                    onSubmitted: (t) => _buscar(painel, t),
-                    decoration: InputDecoration(
-                      hintText: 'Buscar bairro ou região',
-                      prefixIcon: Icon(Icons.search, color: c.tinta2),
-                    ),
-                  ),
-                ),
-                // Botões do mapa
-                Positioned(
-                  right: 12,
-                  top: MediaQuery.paddingOf(context).top + 76,
-                  child: Column(
-                    children: [
-                      _BotaoMapa(
-                          icone: Icons.my_location,
-                          rotulo: 'Centralizar na minha localização',
-                          aoTocar: _centralizarEmMim),
-                      const SizedBox(height: 8),
-                      _BotaoMapa(
-                        icone: Icons.layers_outlined,
-                        rotulo: 'Exibição do mapa: tipo de mapa e camadas',
-                        aoTocar: () => mostrarPainelExibicao(context),
-                      ),
-                    ],
-                  ),
-                ),
-                // Régua do rio da região
-                if (estacao?.cotas != null)
-                  Positioned(
-                    left: 12,
-                    top: MediaQuery.paddingOf(context).top + 76,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        SizedBox(
-                          height: (MediaQuery.sizeOf(context).height * 0.34).clamp(180.0, 320.0),
-                          width: 64,
-                          child: Regua(
-                              cotas: estacao!.cotas!,
-                              nivel: estacao.leituraRecente() ? estacao.nivel : null,
-                              rio: estacao.titulo),
+                        // Botões do mapa
+                        Positioned(
+                          right: 12,
+                          top: MediaQuery.paddingOf(context).top + 76,
+                          child: Column(
+                            children: [
+                              _BotaoMapa(
+                                  icone: Icons.my_location,
+                                  rotulo: 'Centralizar na minha localização',
+                                  aoTocar: _centralizarEmMim),
+                              const SizedBox(height: 8),
+                              _BotaoMapa(
+                                icone: Icons.layers_outlined,
+                                rotulo:
+                                    'Exibição do mapa: tipo de mapa e camadas',
+                                aoTocar: () => mostrarPainelExibicao(context),
+                              ),
+                            ],
+                          ),
                         ),
+                        // Cartão que sobe e desce
+                        _FolhaRegiao(
+                            painel: painel, regiao: regiao, estacao: estacao),
                       ],
-                    ),
-                  ),
-              ],
-            ),
+                    )),
           ),
-          _FolhaRegiao(painel: painel, regiao: regiao, estacao: estacao),
         ],
       ),
     );
@@ -267,7 +322,8 @@ class _MapaScreenState extends State<MapaScreen> {
 }
 
 class _BotaoMapa extends StatelessWidget {
-  const _BotaoMapa({required this.icone, required this.rotulo, required this.aoTocar});
+  const _BotaoMapa(
+      {required this.icone, required this.rotulo, required this.aoTocar});
   final IconData icone;
   final String rotulo;
   final VoidCallback aoTocar;
@@ -279,42 +335,80 @@ class _BotaoMapa extends StatelessWidget {
       message: rotulo,
       child: Material(
         color: c.papel,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: c.linha)),
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(color: c.linha)),
         child: InkWell(
           borderRadius: BorderRadius.circular(12),
           onTap: aoTocar,
-          child: SizedBox(width: 48, height: 48, child: Icon(icone, color: c.canal, semanticLabel: rotulo)),
+          child: SizedBox(
+              width: 48,
+              height: 48,
+              child: Icon(icone, color: c.canal, semanticLabel: rotulo)),
         ),
       ),
     );
   }
 }
 
+/// Marcador da região: amostra de hachura do risco e, se houver estação
+/// perto, o nível do rio na mesma etiqueta (um símbolo só, sem sobreposição).
 class _MarcaRegiao extends StatelessWidget {
-  const _MarcaRegiao(
-      {required this.regiao, required this.severidade, required this.selecionada, required this.aoTocar});
+  const _MarcaRegiao({
+    required this.regiao,
+    required this.severidade,
+    required this.estacao,
+    required this.selecionada,
+    required this.aoTocar,
+  });
   final Regiao regiao;
   final Severidade severidade;
+  final Estacao? estacao;
   final bool selecionada;
   final VoidCallback aoTocar;
 
   @override
   Widget build(BuildContext context) {
     final c = AquaColors.of(context);
+    final t = Theme.of(context).textTheme;
+    final nivel = (estacao?.leituraRecente() ?? false)
+        ? '${formatarMetros(estacao!.nivel!)} m'
+        : null;
     return Semantics(
       button: true,
-      label: '${regiao.nome}: risco ${severidade.rotulo.toLowerCase()}',
+      label:
+          '${regiao.nome}: risco ${severidade.rotulo.toLowerCase()}${nivel != null ? ', rio a $nivel' : ''}',
+      excludeSemantics: true,
       child: GestureDetector(
         onTap: aoTocar,
         child: Center(
-          child: Container(
-            padding: const EdgeInsets.all(5),
-            decoration: BoxDecoration(
-              color: c.papel,
-              borderRadius: BorderRadius.circular(6),
-              border: Border.all(color: selecionada ? c.tinta : c.linha, width: selecionada ? 2 : 1),
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Container(
+              padding: const EdgeInsets.fromLTRB(5, 5, 8, 5),
+              decoration: BoxDecoration(
+                color: c.papel,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                    color: selecionada ? c.tinta : c.linha,
+                    width: selecionada ? 2.5 : 1),
+                boxShadow: [BoxShadow(color: c.sombra, blurRadius: 6)],
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ClipRRect(
+                      borderRadius: BorderRadius.circular(14),
+                      child:
+                          AmostraHachura(severidade: severidade, tamanho: 24)),
+                  const SizedBox(width: 6),
+                  Text(nivel ?? regiao.nome,
+                      style: t.labelMedium!.copyWith(
+                          color: c.tinta, fontWeight: FontWeight.w700),
+                      textScaler: TextScaler.noScaling),
+                ],
+              ),
             ),
-            child: AmostraHachura(severidade: severidade, tamanho: 20),
           ),
         ),
       ),
@@ -322,6 +416,7 @@ class _MarcaRegiao extends StatelessWidget {
   }
 }
 
+/// Estação sem região por perto: gota d'água e o nível.
 class _MarcaEstacao extends StatelessWidget {
   const _MarcaEstacao({required this.estacao});
   final Estacao estacao;
@@ -336,23 +431,30 @@ class _MarcaEstacao extends StatelessWidget {
       label: recente
           ? 'Estação ${estacao.titulo}: ${formatarMetros(estacao.nivel!)} metros'
           : 'Estação ${estacao.titulo}: sem leitura recente',
+      excludeSemantics: true,
       child: Center(
         child: FittedBox(
           fit: BoxFit.scaleDown,
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
             decoration: BoxDecoration(
               color: c.papel,
-              borderRadius: BorderRadius.circular(4),
-              border: Border.all(color: s == null ? c.linha : c.corDe(s), width: 1.5),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                  color: s == null ? c.linha : c.corDe(s), width: 1.5),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.straighten, size: 14, color: c.tinta2),
+                Icon(Icons.water_drop, size: 15, color: c.canal),
                 const SizedBox(width: 4),
-                Text(recente ? '${formatarMetros(estacao.nivel!)} m' : 'sem leitura',
-                    style: t.labelSmall!.copyWith(color: c.tinta), textScaler: TextScaler.noScaling),
+                Text(
+                    recente
+                        ? '${formatarMetros(estacao.nivel!)} m'
+                        : 'sem leitura',
+                    style: t.labelMedium!
+                        .copyWith(color: c.tinta, fontWeight: FontWeight.w700),
+                    textScaler: TextScaler.noScaling),
               ],
             ),
           ),
@@ -362,8 +464,11 @@ class _MarcaEstacao extends StatelessWidget {
   }
 }
 
+/// Cartão de baixo: fechado mostra o risco; puxado para cima mostra a régua,
+/// as cotas e as ações.
 class _FolhaRegiao extends StatelessWidget {
-  const _FolhaRegiao({required this.painel, required this.regiao, required this.estacao});
+  const _FolhaRegiao(
+      {required this.painel, required this.regiao, required this.estacao});
   final Painel painel;
   final Regiao? regiao;
   final Estacao? estacao;
@@ -373,18 +478,55 @@ class _FolhaRegiao extends StatelessWidget {
     final c = AquaColors.of(context);
     final t = Theme.of(context).textTheme;
 
-    if (regiao == null) {
-      return Container(
-        color: c.papel,
-        padding: const EdgeInsets.all(20),
-        child: painel.carregando
-            ? const LinearProgressIndicator()
-            : Text('Nenhuma região monitorada encontrada.', style: t.bodyLarge),
-      );
-    }
+    return DraggableScrollableSheet(
+      initialChildSize: 0.34,
+      minChildSize: _alturaMinima,
+      maxChildSize: 0.86,
+      snap: true,
+      snapSizes: const [0.34],
+      builder: (context, controle) => Container(
+        decoration: BoxDecoration(
+          color: c.papel,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+          border: Border(top: BorderSide(color: c.linha)),
+          boxShadow: [
+            BoxShadow(
+                color: c.sombra, blurRadius: 24, offset: const Offset(0, -6))
+          ],
+        ),
+        child: ListView(
+          controller: controle,
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+          children: [
+            Semantics(
+              label: 'Arraste para cima para ver mais detalhes',
+              child: Center(
+                child: Container(
+                  width: 40,
+                  height: 5,
+                  margin: const EdgeInsets.only(bottom: 12, top: 2),
+                  decoration: BoxDecoration(
+                      color: c.linha, borderRadius: BorderRadius.circular(3)),
+                ),
+              ),
+            ),
+            if (regiao == null)
+              painel.carregando
+                  ? const LinearProgressIndicator()
+                  : Text('Nenhuma região monitorada encontrada.',
+                      style: t.bodyLarge)
+            else
+              ..._conteudo(context, c, t),
+          ],
+        ),
+      ),
+    );
+  }
 
+  List<Widget> _conteudo(BuildContext context, AquaColors c, TextTheme t) {
     final severidade = painel.severidadeDaRegiao(regiao!.id);
-    final alerta = painel.ativos.where((a) => a.regiaoId == regiao!.id).firstOrNull;
+    final alerta =
+        painel.ativos.where((a) => a.regiaoId == regiao!.id).firstOrNull;
     final recente = estacao?.leituraRecente() ?? false;
 
     String frase;
@@ -400,53 +542,109 @@ class _FolhaRegiao extends StatelessWidget {
     }
     final tendencia = recente ? formatarTendencia(estacao!.variacao24h) : null;
     final fonte = recente
-        ? ['Leitura da ANA, ${formatarDataHora(estacao!.lidoEm!)}', if (tendencia != null) tendencia].join('. ')
-        : (estacao != null ? 'Sem leitura recente da estação ${estacao!.nome}' : 'Sem estação da ANA próxima');
+        ? [
+            'Leitura da ANA, ${formatarDataHora(estacao!.lidoEm!)}',
+            if (tendencia != null) tendencia
+          ].join('. ')
+        : (estacao != null
+            ? 'Sem leitura recente da estação ${estacao!.nome}'
+            : 'Sem estação da ANA próxima');
+    final cotas = estacao?.cotas;
 
-    return Container(
-      decoration: BoxDecoration(
-        color: c.papel,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-        boxShadow: [BoxShadow(color: c.sombra, blurRadius: 24, offset: const Offset(0, -6))],
-      ),
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Row(
+    Widget linhaCota(String rotulo, double valor, Severidade nivelCota) =>
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 3),
+          child: Row(
             children: [
-              Expanded(child: SeloSeveridade(severidade: severidade, mostrarAcao: true, grande: true)),
-              Text(
-                  painel.principalEhSeguida || regiao!.id != painel.regiaoPrincipal?.id
-                      ? regiao!.nome
-                      : 'Maior risco agora',
-                  style: t.bodySmall),
+              ClipRRect(
+                  borderRadius: BorderRadius.circular(3),
+                  child: AmostraHachura(severidade: nivelCota, tamanho: 16)),
+              const SizedBox(width: 8),
+              Expanded(child: Text(rotulo, style: t.bodyMedium)),
+              Text('${formatarMetros(valor)} m', style: t.titleSmall),
             ],
           ),
-          const SizedBox(height: 6),
-          Text('${regiao!.nome}: $frase', style: t.bodyLarge!.copyWith(fontSize: 16)),
-          const SizedBox(height: 6),
-          Text(fonte, style: t.bodySmall),
-          if (alerta != null) ...[
-            const SizedBox(height: 12),
+        );
+
+    return [
+      Row(
+        children: [
+          Expanded(
+              child: SeloSeveridade(
+                  severidade: severidade, mostrarAcao: true, grande: true)),
+          Flexible(
+            child: Text(
+                painel.principalEhSeguida ||
+                        regiao!.id != painel.regiaoPrincipal?.id
+                    ? regiao!.nome
+                    : 'Maior risco agora',
+                style: t.bodySmall,
+                textAlign: TextAlign.end),
+          ),
+        ],
+      ),
+      const SizedBox(height: 8),
+      Text('${regiao!.nome}: $frase',
+          style: t.bodyLarge!.copyWith(fontSize: 16)),
+      const SizedBox(height: 6),
+      Text(fonte, style: t.bodySmall),
+      if (cotas != null) ...[
+        const SizedBox(height: 20),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
             SizedBox(
-              width: double.infinity,
-              child:
-                  FilledButton(onPressed: () => context.push('/alerts/${alerta.id}'), child: const Text('O que fazer')),
+              height: 230,
+              width: 72,
+              child: Regua(
+                  cotas: cotas,
+                  nivel: recente ? estacao!.nivel : null,
+                  rio: estacao!.titulo),
             ),
-          ] else if (!painel.seguidas.contains(regiao!.id)) ...[
-            const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton(
-                onPressed: () => context.read<PainelCubit>().seguir(regiao!.id, seguir: true),
-                child: const Text('Seguir região'),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(estacao!.titulo, style: t.titleSmall),
+                  const SizedBox(height: 2),
+                  Text('Estação ${estacao!.nome} · ANA ${estacao!.codigoAna}',
+                      style: t.bodySmall),
+                  const SizedBox(height: 14),
+                  Text('Cotas oficiais', style: t.labelLarge),
+                  linhaCota('Alerta', cotas.alerta, Severidade.medio),
+                  linhaCota('Inundação', cotas.inundacao, Severidade.alto),
+                  if (cotas.severa != null)
+                    linhaCota(
+                        'Inundação severa', cotas.severa!, Severidade.critico),
+                  if (regiao!.areaKm2 != null) ...[
+                    const SizedBox(height: 12),
+                    Text('Município com ${regiao!.areaKm2!.round()} km²',
+                        style: t.bodySmall),
+                  ],
+                ],
               ),
             ),
           ],
-        ],
-      ),
-    );
+        ),
+      ],
+      const SizedBox(height: 16),
+      if (alerta != null)
+        SizedBox(
+          width: double.infinity,
+          child: FilledButton(
+              onPressed: () => context.push('/alerts/${alerta.id}'),
+              child: const Text('O que fazer')),
+        )
+      else if (!painel.seguidas.contains(regiao!.id))
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton(
+            onPressed: () =>
+                context.read<PainelCubit>().seguir(regiao!.id, seguir: true),
+            child: const Text('Seguir região'),
+          ),
+        ),
+    ];
   }
 }

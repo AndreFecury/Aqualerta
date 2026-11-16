@@ -19,13 +19,16 @@ class PreferenciasNotificacao extends Equatable {
 
   bool deveAvisar(Severidade s) => ativas && s >= severidadeMinima;
 
-  PreferenciasNotificacao copyWith({bool? ativas, bool? som, Severidade? severidadeMinima}) => PreferenciasNotificacao(
+  PreferenciasNotificacao copyWith(
+          {bool? ativas, bool? som, Severidade? severidadeMinima}) =>
+      PreferenciasNotificacao(
         ativas: ativas ?? this.ativas,
         som: som ?? this.som,
         severidadeMinima: severidadeMinima ?? this.severidadeMinima,
       );
 
-  Map<String, Object> paraBanco() => {'push': ativas, 'sound': som, 'min_severity': severidadeMinima.codigo};
+  Map<String, Object> paraBanco() =>
+      {'push': ativas, 'sound': som, 'min_severity': severidadeMinima.codigo};
 
   @override
   List<Object?> get props => [ativas, som, severidadeMinima];
@@ -45,15 +48,18 @@ class NotificacoesCubit extends Cubit<PreferenciasNotificacao> {
   static const _kSom = 'avisos.som';
   static const _kMinima = 'avisos.minima';
 
-  static PreferenciasNotificacao _ler(SharedPreferences p) => PreferenciasNotificacao(
+  static PreferenciasNotificacao _ler(SharedPreferences p) =>
+      PreferenciasNotificacao(
         ativas: p.getBool(_kAtivas) ?? true,
         som: p.getBool(_kSom) ?? true,
-        severidadeMinima: Severidade.doCodigo(p.getString(_kMinima) ?? Severidade.medio.codigo),
+        severidadeMinima: Severidade.doCodigo(
+            p.getString(_kMinima) ?? Severidade.medio.codigo),
       );
 
   Future<void> definirAtivas(bool v) => _salvar(state.copyWith(ativas: v));
   Future<void> definirSom(bool v) => _salvar(state.copyWith(som: v));
-  Future<void> definirMinima(Severidade s) => _salvar(state.copyWith(severidadeMinima: s));
+  Future<void> definirMinima(Severidade s) =>
+      _salvar(state.copyWith(severidadeMinima: s));
 
   Future<void> _salvar(PreferenciasNotificacao novo) async {
     emit(novo);
@@ -64,7 +70,9 @@ class NotificacoesCubit extends Cubit<PreferenciasNotificacao> {
     final uid = c?.auth.currentUser?.id;
     if (c == null || uid == null) return;
     try {
-      await c.from('user_profiles').update({'notification_preferences': novo.paraBanco()}).eq('id', uid);
+      await c
+          .from('user_profiles')
+          .update({'notification_preferences': novo.paraBanco()}).eq('id', uid);
     } catch (_) {
       // Sem internet: fica salvo no aparelho e vai na próxima alteração.
     }

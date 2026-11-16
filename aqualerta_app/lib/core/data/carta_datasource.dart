@@ -9,7 +9,8 @@ import 'package:aqualerta/core/domain/severidade.dart';
 /// não existirem no banco, cai para as tabelas e views antigas, sem contornos
 /// e sem estações, em vez de quebrar a tela.
 class CartaDatasource {
-  CartaDatasource([SupabaseClient? cliente]) : _c = cliente ?? Supabase.instance.client;
+  CartaDatasource([SupabaseClient? cliente])
+      : _c = cliente ?? Supabase.instance.client;
 
   final SupabaseClient _c;
 
@@ -22,7 +23,8 @@ class CartaDatasource {
     try {
       final linhas = await _c
           .from('v_regioes_mapa')
-          .select('id, name, state_code, municipality, area_km2, geojson, center_lat, center_lng')
+          .select(
+              'id, name, state_code, municipality, area_km2, geojson, center_lat, center_lng')
           .order('name');
       return [
         for (final r in linhas)
@@ -62,7 +64,8 @@ class CartaDatasource {
     try {
       final linhas = await _c
           .from('v_eventos_mapa')
-          .select('id, region_id, region_name, state_code, detected_at, severity, flooded_area_km2, area_real, geojson')
+          .select(
+              'id, region_id, region_name, state_code, detected_at, severity, flooded_area_km2, area_real, geojson')
           .order('detected_at', ascending: false)
           .limit(200);
       return [
@@ -81,9 +84,8 @@ class CartaDatasource {
     } on PostgrestException {
       viewsV3Disponiveis = false;
       // Corrige a consulta antiga, que pedia colunas inexistentes em flood_events.
-      final linhas = await _c
-          .from('v_recent_flood_events')
-          .select('id, region_id, region_name, state_code, detected_at, severity, flooded_area_km2');
+      final linhas = await _c.from('v_recent_flood_events').select(
+          'id, region_id, region_name, state_code, detected_at, severity, flooded_area_km2');
       return [
         for (final r in linhas)
           Evento(
@@ -108,10 +110,14 @@ class CartaDatasource {
             codigoAna: r['ana_code'] as String,
             nome: r['name'] as String,
             rio: r['river'] as String?,
-            posicao: (r['lat'] != null && r['lng'] != null) ? LatLng(_d(r['lat'])!, _d(r['lng'])!) : null,
+            posicao: (r['lat'] != null && r['lng'] != null)
+                ? LatLng(_d(r['lat'])!, _d(r['lng'])!)
+                : null,
             cotas: _cotas(r),
             nivel: _d(r['water_level_m']),
-            lidoEm: r['recorded_at'] != null ? DateTime.parse(r['recorded_at'] as String) : null,
+            lidoEm: r['recorded_at'] != null
+                ? DateTime.parse(r['recorded_at'] as String)
+                : null,
             nivel24h: _d(r['level_24h_m']),
           ),
       ];
@@ -126,15 +132,18 @@ class CartaDatasource {
     final i = _d(r['flood_level_m']);
     final s = _d(r['emergency_level_m']);
     if (a == null || i == null || a > i) return null;
-    return CotasEstacao(alerta: a, inundacao: i, severa: (s != null && s >= i) ? s : null);
+    return CotasEstacao(
+        alerta: a, inundacao: i, severa: (s != null && s >= i) ? s : null);
   }
 
   /// Alertas ativos e os encerrados nos últimos 90 dias.
   Future<List<AlertaV3>> alertas() async {
-    final desde = DateTime.now().subtract(const Duration(days: 90)).toIso8601String();
+    final desde =
+        DateTime.now().subtract(const Duration(days: 90)).toIso8601String();
     final linhas = await _c
         .from('alerts')
-        .select('id, region_id, title, body, severity, status, issued_at, resolved_at, flood_event_id, '
+        .select(
+            'id, region_id, title, body, severity, status, issued_at, resolved_at, flood_event_id, '
             'monitored_regions!inner(name, state_code)')
         .or('status.eq.ACTIVE,issued_at.gte.$desde')
         .order('issued_at', ascending: false)
@@ -144,13 +153,16 @@ class CartaDatasource {
         AlertaV3(
           id: r['id'] as String,
           regiaoId: r['region_id'] as String,
-          regiaoNome: '${r['monitored_regions']['name']}, ${r['monitored_regions']['state_code']}',
+          regiaoNome:
+              '${r['monitored_regions']['name']}, ${r['monitored_regions']['state_code']}',
           titulo: r['title'] as String,
           texto: r['body'] as String,
           severidadeOriginal: Severidade.doCodigo(r['severity'] as String?),
           ativo: r['status'] == 'ACTIVE',
           emitidoEm: DateTime.parse(r['issued_at'] as String),
-          encerradoEm: r['resolved_at'] != null ? DateTime.parse(r['resolved_at'] as String) : null,
+          encerradoEm: r['resolved_at'] != null
+              ? DateTime.parse(r['resolved_at'] as String)
+              : null,
           eventoId: r['flood_event_id'] as String?,
         ),
     ];
@@ -160,7 +172,10 @@ class CartaDatasource {
   Future<Set<String>> regioesSeguidas() async {
     final uid = _c.auth.currentUser?.id;
     if (uid == null) return {};
-    final linhas = await _c.from('user_monitored_regions').select('region_id').eq('user_id', uid);
+    final linhas = await _c
+        .from('user_monitored_regions')
+        .select('region_id')
+        .eq('user_id', uid);
     return {for (final r in linhas) r['region_id'] as String};
   }
 
@@ -168,9 +183,15 @@ class CartaDatasource {
     final uid = _c.auth.currentUser?.id;
     if (uid == null) return;
     if (seguir) {
-      await _c.from('user_monitored_regions').upsert({'user_id': uid, 'region_id': regiaoId});
+      await _c
+          .from('user_monitored_regions')
+          .upsert({'user_id': uid, 'region_id': regiaoId});
     } else {
-      await _c.from('user_monitored_regions').delete().eq('user_id', uid).eq('region_id', regiaoId);
+      await _c
+          .from('user_monitored_regions')
+          .delete()
+          .eq('user_id', uid)
+          .eq('region_id', regiaoId);
     }
   }
 

@@ -41,9 +41,12 @@ class PerfilScreen extends StatelessWidget {
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
                   title: Text('Usar o tamanho do celular', style: t.titleSmall),
-                  subtitle: Text('Segue a configuração de acessibilidade do aparelho', style: t.bodySmall),
+                  subtitle: Text(
+                      'Segue a configuração de acessibilidade do aparelho',
+                      style: t.bodySmall),
                   value: aparencia.usarTamanhoDoCelular,
-                  onChanged: context.read<AparenciaCubit>().usarTamanhoDoCelular,
+                  onChanged:
+                      context.read<AparenciaCubit>().usarTamanhoDoCelular,
                 ),
                 if (!aparencia.usarTamanhoDoCelular) ...[
                   const SizedBox(height: 8),
@@ -51,10 +54,14 @@ class PerfilScreen extends StatelessWidget {
                     showSelectedIcon: false,
                     segments: [
                       for (final e in EscalaTexto.values)
-                        ButtonSegment(value: e, label: Text(_rotulosEscala[e]!, semanticsLabel: e.rotulo)),
+                        ButtonSegment(
+                            value: e,
+                            label: Text(_rotulosEscala[e]!,
+                                semanticsLabel: e.rotulo)),
                     ],
                     selected: {aparencia.escala},
-                    onSelectionChanged: (s) => context.read<AparenciaCubit>().definirEscala(s.first),
+                    onSelectionChanged: (s) =>
+                        context.read<AparenciaCubit>().definirEscala(s.first),
                   ),
                 ],
                 const SizedBox(height: 12),
@@ -69,9 +76,14 @@ class PerfilScreen extends StatelessWidget {
                     children: [
                       Text('Prévia', style: t.bodySmall),
                       const SizedBox(height: 4),
-                      const SeloSeveridade(severidade: Severidade.alto, mostrarAcao: true, grande: true),
+                      const SeloSeveridade(
+                          severidade: Severidade.alto,
+                          mostrarAcao: true,
+                          grande: true),
                       const SizedBox(height: 4),
-                      Text('Na Compensa, o Rio Negro está 30 cm acima da cota de alerta.', style: t.bodyLarge),
+                      Text(
+                          'Na Compensa, o Rio Negro está 30 cm acima da cota de alerta.',
+                          style: t.bodyLarge),
                     ],
                   ),
                 ),
@@ -82,36 +94,48 @@ class PerfilScreen extends StatelessWidget {
                   segments: const [
                     ButtonSegment(value: ThemeMode.light, label: Text('Claro')),
                     ButtonSegment(value: ThemeMode.dark, label: Text('Escuro')),
-                    ButtonSegment(value: ThemeMode.system, label: Text('Automático')),
+                    ButtonSegment(
+                        value: ThemeMode.system, label: Text('Automático')),
                   ],
                   selected: {aparencia.tema},
-                  onSelectionChanged: (s) => context.read<AparenciaCubit>().definirTema(s.first),
+                  onSelectionChanged: (s) =>
+                      context.read<AparenciaCubit>().definirTema(s.first),
                 ),
                 const SizedBox(height: 28),
                 const TituloSecao('Avisos'),
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
                   title: Text('Notificações', style: t.titleSmall),
-                  subtitle: Text('Receber alertas das regiões que você segue', style: t.bodySmall),
+                  subtitle: Text('Receber alertas das regiões que você segue',
+                      style: t.bodySmall),
                   value: avisos.ativas,
                   onChanged: context.read<NotificacoesCubit>().definirAtivas,
                 ),
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
                   title: Text('Som de alerta', style: t.titleSmall),
-                  subtitle: Text('Tocar som nos níveis Alto e Crítico', style: t.bodySmall),
+                  subtitle: Text('Tocar som nos níveis Alto e Crítico',
+                      style: t.bodySmall),
                   value: avisos.som,
-                  onChanged: avisos.ativas ? context.read<NotificacoesCubit>().definirSom : null,
+                  onChanged: avisos.ativas
+                      ? context.read<NotificacoesCubit>().definirSom
+                      : null,
                 ),
                 const SizedBox(height: 8),
                 Text('Avisar a partir de', style: t.titleSmall),
                 const SizedBox(height: 8),
                 SegmentedButton<Severidade>(
                   showSelectedIcon: false,
-                  segments: [for (final s in Severidade.values) ButtonSegment(value: s, label: Text(s.rotulo))],
+                  segments: [
+                    for (final s in Severidade.values)
+                      ButtonSegment(value: s, label: Text(s.rotulo))
+                  ],
                   selected: {avisos.severidadeMinima},
-                  onSelectionChanged:
-                      avisos.ativas ? (s) => context.read<NotificacoesCubit>().definirMinima(s.first) : null,
+                  onSelectionChanged: avisos.ativas
+                      ? (s) => context
+                          .read<NotificacoesCubit>()
+                          .definirMinima(s.first)
+                      : null,
                 ),
                 const SizedBox(height: 8),
                 Text(
@@ -124,10 +148,22 @@ class PerfilScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 28),
                 const TituloSecao('Fontes de dados'),
-                _LinhaFonte(nome: 'ANA, nível dos rios a cada 30 min', estado: 'Ativa', cor: c.textoDe(Severidade.baixo)),
-                _LinhaFonte(nome: 'SGB, cotas de alerta e inundação', estado: 'Ativa', cor: c.textoDe(Severidade.baixo)),
-                _LinhaFonte(nome: 'IBGE, limites dos municípios', estado: 'Ativa', cor: c.textoDe(Severidade.baixo)),
-                _LinhaFonte(nome: 'Copernicus, satélite', estado: 'Em breve', cor: c.tinta2),
+                _LinhaFonte(
+                    nome: 'ANA, nível dos rios a cada 30 min',
+                    estado: 'Ativa',
+                    cor: c.textoDe(Severidade.baixo)),
+                _LinhaFonte(
+                    nome: 'SGB, cotas de alerta e inundação',
+                    estado: 'Ativa',
+                    cor: c.textoDe(Severidade.baixo)),
+                _LinhaFonte(
+                    nome: 'IBGE, limites dos municípios',
+                    estado: 'Ativa',
+                    cor: c.textoDe(Severidade.baixo)),
+                _LinhaFonte(
+                    nome: 'Copernicus, satélite',
+                    estado: 'Em breve',
+                    cor: c.tinta2),
                 const SizedBox(height: 28),
                 OutlinedButton(
                   style: OutlinedButton.styleFrom(
@@ -141,7 +177,11 @@ class PerfilScreen extends StatelessWidget {
                 FutureBuilder<PackageInfo>(
                   future: PackageInfo.fromPlatform(),
                   builder: (_, v) => Center(
-                    child: Text(v.hasData ? 'AquaAlerta ${v.data!.version}' : 'AquaAlerta', style: t.bodySmall),
+                    child: Text(
+                        v.hasData
+                            ? 'AquaAlerta ${v.data!.version}'
+                            : 'AquaAlerta',
+                        style: t.bodySmall),
                   ),
                 ),
               ],
@@ -162,7 +202,8 @@ String? _emailAtual() {
 }
 
 class _LinhaFonte extends StatelessWidget {
-  const _LinhaFonte({required this.nome, required this.estado, required this.cor});
+  const _LinhaFonte(
+      {required this.nome, required this.estado, required this.cor});
   final String nome;
   final String estado;
   final Color cor;
@@ -172,7 +213,9 @@ class _LinhaFonte extends StatelessWidget {
     final t = Theme.of(context).textTheme;
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 12),
-      decoration: BoxDecoration(border: Border(bottom: BorderSide(color: AquaColors.of(context).linha))),
+      decoration: BoxDecoration(
+          border:
+              Border(bottom: BorderSide(color: AquaColors.of(context).linha))),
       child: Row(
         children: [
           Expanded(child: Text(nome, style: t.bodyLarge)),

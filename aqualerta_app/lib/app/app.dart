@@ -41,7 +41,9 @@ class _AqualertaAppState extends State<AqualertaApp> {
     return MultiBlocProvider(
       providers: [
         BlocProvider(create: (_) => AparenciaCubit(widget.preferencias)),
-        BlocProvider(create: (_) => NotificacoesCubit(widget.preferencias, cliente: Supabase.instance.client)),
+        BlocProvider(
+            create: (_) => NotificacoesCubit(widget.preferencias,
+                cliente: Supabase.instance.client)),
         BlocProvider(create: (_) => CamadasCubit(widget.preferencias)),
       ],
       child: BlocBuilder<AparenciaCubit, Aparencia>(
@@ -57,7 +59,8 @@ class _AqualertaAppState extends State<AqualertaApp> {
           builder: (context, child) {
             final mq = MediaQuery.of(context);
             return MediaQuery(
-              data: mq.copyWith(textScaler: aparencia.escalaFinal(mq.textScaler)),
+              data:
+                  mq.copyWith(textScaler: aparencia.escalaFinal(mq.textScaler)),
               child: child!,
             );
           },

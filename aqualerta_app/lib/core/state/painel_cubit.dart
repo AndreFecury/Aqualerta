@@ -74,14 +74,18 @@ class Painel extends Equatable {
     }
     Regiao? pior;
     for (final r in regioes) {
-      if (pior == null || severidadeDaRegiao(r.id).index > severidadeDaRegiao(pior.id).index) pior = r;
+      if (pior == null ||
+          severidadeDaRegiao(r.id).index > severidadeDaRegiao(pior.id).index)
+        pior = r;
     }
     return pior;
   }
 
-  bool get principalEhSeguida => regiaoPrincipal != null && seguidas.contains(regiaoPrincipal!.id);
+  bool get principalEhSeguida =>
+      regiaoPrincipal != null && seguidas.contains(regiaoPrincipal!.id);
 
-  Estacao? estacaoDaRegiao(Regiao? r) => estacaoMaisProxima(r?.centro, estacoes);
+  Estacao? estacaoDaRegiao(Regiao? r) =>
+      estacaoMaisProxima(r?.centro, estacoes);
 
   Painel copyWith({
     bool? carregando,
@@ -108,12 +112,22 @@ class Painel extends Equatable {
       );
 
   @override
-  List<Object?> get props =>
-      [carregando, erro, regioes, eventos, estacoes, alertas, seguidas, atualizadoEm, bancoSemViewsV3];
+  List<Object?> get props => [
+        carregando,
+        erro,
+        regioes,
+        eventos,
+        estacoes,
+        alertas,
+        seguidas,
+        atualizadoEm,
+        bancoSemViewsV3
+      ];
 }
 
 class PainelCubit extends Cubit<Painel> {
-  PainelCubit(this._dados, {bool ouvirTempoReal = true}) : super(const Painel()) {
+  PainelCubit(this._dados, {bool ouvirTempoReal = true})
+      : super(const Painel()) {
     carregar();
     if (ouvirTempoReal) {
       _canal = _dados.ouvirMudancas(() {
@@ -176,7 +190,8 @@ class PainelCubit extends Cubit<Painel> {
     }
   }
 
-  String _hora(DateTime d) => '${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
+  String _hora(DateTime d) =>
+      '${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
 
   @override
   Future<void> close() async {

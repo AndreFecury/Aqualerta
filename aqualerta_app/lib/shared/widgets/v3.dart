@@ -3,7 +3,12 @@ import 'package:aqualerta/shared/theme/aqua_colors.dart';
 
 /// Faixa de aviso no topo do conteúdo (sem conexão, banco desatualizado...).
 class FaixaAviso extends StatelessWidget {
-  const FaixaAviso({required this.texto, this.icone = Icons.info_outline, this.acao, this.aoTocar, super.key});
+  const FaixaAviso(
+      {required this.texto,
+      this.icone = Icons.info_outline,
+      this.acao,
+      this.aoTocar,
+      super.key});
 
   final String texto;
   final IconData icone;
@@ -28,7 +33,8 @@ class FaixaAviso extends StatelessWidget {
             Icon(icone, size: 20, color: c.tinta2),
             const SizedBox(width: 10),
             Expanded(child: Text(texto, style: t.bodyMedium)),
-            if (acao != null) TextButton(onPressed: aoTocar, child: Text(acao!)),
+            if (acao != null)
+              TextButton(onPressed: aoTocar, child: Text(acao!)),
           ],
         ),
       ),
@@ -39,7 +45,11 @@ class FaixaAviso extends StatelessWidget {
 /// Estado vazio: explica e diz o que acontece em seguida.
 class EstadoVazio extends StatelessWidget {
   const EstadoVazio(
-      {required this.titulo, required this.texto, this.icone = Icons.check_circle_outline, this.acao, super.key});
+      {required this.titulo,
+      required this.texto,
+      this.icone = Icons.check_circle_outline,
+      this.acao,
+      super.key});
 
   final String titulo;
   final String texto;
@@ -59,7 +69,9 @@ class EstadoVazio extends StatelessWidget {
           const SizedBox(height: 12),
           Text(titulo, style: t.titleMedium, textAlign: TextAlign.center),
           const SizedBox(height: 6),
-          Text(texto, style: t.bodyLarge!.copyWith(color: c.tinta2), textAlign: TextAlign.center),
+          Text(texto,
+              style: t.bodyLarge!.copyWith(color: c.tinta2),
+              textAlign: TextAlign.center),
           if (acao != null) ...[const SizedBox(height: 16), acao!],
         ],
       ),
@@ -69,7 +81,8 @@ class EstadoVazio extends StatelessWidget {
 
 /// Cabeçalho das telas principais (título + subtítulo), sem barra de app.
 class CabecalhoTela extends StatelessWidget {
-  const CabecalhoTela({required this.titulo, this.subtitulo, this.acoes = const [], super.key});
+  const CabecalhoTela(
+      {required this.titulo, this.subtitulo, this.acoes = const [], super.key});
 
   final String titulo;
   final String? subtitulo;
@@ -81,8 +94,10 @@ class CabecalhoTela extends StatelessWidget {
     final t = Theme.of(context).textTheme;
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.fromLTRB(16, MediaQuery.paddingOf(context).top + 16, 8, 14),
-      decoration: BoxDecoration(color: c.papel, border: Border(bottom: BorderSide(color: c.linha))),
+      padding: EdgeInsets.fromLTRB(
+          16, MediaQuery.paddingOf(context).top + 16, 8, 14),
+      decoration: BoxDecoration(
+          color: c.papel, border: Border(bottom: BorderSide(color: c.linha))),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -90,10 +105,12 @@ class CabecalhoTela extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Semantics(header: true, child: Text(titulo, style: t.headlineSmall)),
+                Semantics(
+                    header: true, child: Text(titulo, style: t.headlineSmall)),
                 if (subtitulo != null) ...[
                   const SizedBox(height: 2),
-                  Text(subtitulo!, style: t.bodyLarge!.copyWith(color: c.tinta2)),
+                  Text(subtitulo!,
+                      style: t.bodyLarge!.copyWith(color: c.tinta2)),
                 ],
               ],
             ),
@@ -113,6 +130,8 @@ class TituloSecao extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Padding(
         padding: const EdgeInsets.only(bottom: 8),
-        child: Semantics(header: true, child: Text(texto, style: Theme.of(context).textTheme.titleLarge)),
+        child: Semantics(
+            header: true,
+            child: Text(texto, style: Theme.of(context).textTheme.titleLarge)),
       );
 }

@@ -24,14 +24,17 @@ class AlertasScreen extends StatelessWidget {
       child: Scaffold(
         body: Column(
           children: [
-            const CabecalhoTela(titulo: 'Alertas', subtitulo: 'Regiões monitoradas pelo AquaAlerta'),
+            const CabecalhoTela(
+                titulo: 'Alertas',
+                subtitulo: 'Regiões monitoradas pelo AquaAlerta'),
             Material(
               color: c.papel,
               child: TabBar(
                 labelColor: c.tinta,
                 unselectedLabelColor: c.tinta2,
                 labelStyle: t.titleSmall,
-                unselectedLabelStyle: t.titleSmall!.copyWith(fontWeight: FontWeight.w500),
+                unselectedLabelStyle:
+                    t.titleSmall!.copyWith(fontWeight: FontWeight.w500),
                 indicatorColor: c.canal,
                 indicatorWeight: 3,
                 tabs: [
@@ -57,15 +60,20 @@ class AlertasScreen extends StatelessWidget {
                       child: Row(
                         children: [
                           Expanded(
-                            child: Text('Você recebe avisos a partir de ${minimo.rotulo}.', style: t.bodyMedium),
+                            child: Text(
+                                'Você recebe avisos a partir de ${minimo.rotulo}.',
+                                style: t.bodyMedium),
                           ),
-                          TextButton(onPressed: () => context.go('/perfil'), child: const Text('Alterar')),
+                          TextButton(
+                              onPressed: () => context.go('/perfil'),
+                              child: const Text('Alterar')),
                         ],
                       ),
                     ),
                     vazio: const EstadoVazio(
                       titulo: 'Nenhum alerta ativo',
-                      texto: 'Tudo certo nas regiões monitoradas. Você será avisado se algo mudar.',
+                      texto:
+                          'Tudo certo nas regiões monitoradas. Você será avisado se algo mudar.',
                     ),
                   ),
                   _Lista(
@@ -74,7 +82,8 @@ class AlertasScreen extends StatelessWidget {
                     vazio: const EstadoVazio(
                       icone: Icons.history,
                       titulo: 'Nenhum alerta encerrado',
-                      texto: 'Quando um alerta terminar, ele fica guardado aqui por 90 dias.',
+                      texto:
+                          'Quando um alerta terminar, ele fica guardado aqui por 90 dias.',
                     ),
                   ),
                 ],
@@ -88,7 +97,11 @@ class AlertasScreen extends StatelessWidget {
 }
 
 class _Lista extends StatelessWidget {
-  const _Lista({required this.alertas, required this.carregando, required this.vazio, this.topo});
+  const _Lista(
+      {required this.alertas,
+      required this.carregando,
+      required this.vazio,
+      this.topo});
   final List<AlertaV3> alertas;
   final bool carregando;
   final Widget vazio;
@@ -126,14 +139,16 @@ class _LinhaAlerta extends StatelessWidget {
       onTap: () => context.push('/alerts/${alerta.id}'),
       child: Container(
         padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
-        decoration: BoxDecoration(border: Border(bottom: BorderSide(color: c.linha))),
+        decoration:
+            BoxDecoration(border: Border(bottom: BorderSide(color: c.linha))),
         child: Row(
           children: [
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  SeloSeveridade(severidade: alerta.severidade, mostrarAcao: alerta.ativo),
+                  SeloSeveridade(
+                      severidade: alerta.severidade, mostrarAcao: alerta.ativo),
                   const SizedBox(height: 6),
                   Text(alerta.titulo, style: t.titleMedium),
                   const SizedBox(height: 2),

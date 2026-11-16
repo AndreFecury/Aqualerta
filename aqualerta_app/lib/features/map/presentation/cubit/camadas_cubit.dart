@@ -6,16 +6,19 @@ enum TipoMapa {
   automatico('Automático'),
   carta('Carta'),
   ruas('Ruas'),
-  satelite('Satélite');
+  terreno('Terreno'),
+  satelite('Satélite'),
+  hibrido('Híbrido');
 
   const TipoMapa(this.rotulo);
   final String rotulo;
 }
 
 enum Camada {
-  areasAlagadas('Áreas alagadas', 'Eventos registrados, com a área real quando houver'),
+  areasAlagadas(
+      'Áreas alagadas', 'Eventos registrados, com a área real quando houver'),
   regioes('Regiões monitoradas', 'Bairros e cidades com o nível de risco'),
-  estacoes('Estações dos rios', 'Réguas da ANA com a última leitura'),
+  estacoes('Estações dos rios', 'Nível do rio na última leitura da ANA'),
   minhaLocalizacao('Minha localização', 'Mostra onde você está no mapa');
 
   const Camada(this.titulo, this.descricao);
@@ -26,7 +29,12 @@ enum Camada {
 class ExibicaoMapa extends Equatable {
   const ExibicaoMapa({
     this.tipo = TipoMapa.automatico,
-    this.camadas = const {Camada.areasAlagadas, Camada.regioes, Camada.estacoes, Camada.minhaLocalizacao},
+    this.camadas = const {
+      Camada.areasAlagadas,
+      Camada.regioes,
+      Camada.estacoes,
+      Camada.minhaLocalizacao
+    },
   });
 
   final TipoMapa tipo;
@@ -47,7 +55,8 @@ class CamadasCubit extends Cubit<ExibicaoMapa> {
   static const _kCamadas = 'mapa.camadas';
 
   static ExibicaoMapa _ler(SharedPreferences p) {
-    final tipo = TipoMapa.values.where((t) => t.name == p.getString(_kTipo)).firstOrNull;
+    final tipo =
+        TipoMapa.values.where((t) => t.name == p.getString(_kTipo)).firstOrNull;
     final nomes = p.getStringList(_kCamadas);
     return ExibicaoMapa(
       tipo: tipo ?? TipoMapa.automatico,

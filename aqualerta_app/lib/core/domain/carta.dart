@@ -87,17 +87,22 @@ class Estacao extends Equatable {
   final double? nivel24h;
 
   /// Quanto o rio mudou em 24 horas, em metros (positivo: subiu).
-  double? get variacao24h => (nivel != null && nivel24h != null) ? nivel! - nivel24h! : null;
+  double? get variacao24h =>
+      (nivel != null && nivel24h != null) ? nivel! - nivel24h! : null;
 
   /// Leituras com mais de 2 dias não contam como "agora".
   static const validadeLeitura = Duration(hours: 48);
 
   bool leituraRecente([DateTime? agora]) =>
-      nivel != null && lidoEm != null && (agora ?? DateTime.now()).difference(lidoEm!) <= validadeLeitura;
+      nivel != null &&
+      lidoEm != null &&
+      (agora ?? DateTime.now()).difference(lidoEm!) <= validadeLeitura;
 
   /// Severidade pelas cotas (regra única do app). Nulo sem leitura recente.
   Severidade? severidade([DateTime? agora]) =>
-      (cotas != null && leituraRecente(agora)) ? severidadePorCota(nivel!, cotas!) : null;
+      (cotas != null && leituraRecente(agora))
+          ? severidadePorCota(nivel!, cotas!)
+          : null;
 
   String get titulo => rio ?? nome;
 
@@ -163,9 +168,11 @@ List<List<LatLng>> contornosDoGeoJson(Object? geojson) {
   final coords = geojson['coordinates'];
   List<LatLng> anel(Object? a) => [
         for (final p in (a as List? ?? const []))
-          if (p is List && p.length >= 2) LatLng((p[1] as num).toDouble(), (p[0] as num).toDouble()),
+          if (p is List && p.length >= 2)
+            LatLng((p[1] as num).toDouble(), (p[0] as num).toDouble()),
       ];
-  if (tipo == 'Polygon' && coords is List && coords.isNotEmpty) return [anel(coords.first)];
+  if (tipo == 'Polygon' && coords is List && coords.isNotEmpty)
+    return [anel(coords.first)];
   if (tipo == 'MultiPolygon' && coords is List) {
     return [
       for (final poligono in coords)
@@ -175,6 +182,40 @@ List<List<LatLng>> contornosDoGeoJson(Object? geojson) {
   return const [];
 }
 
+/// `true` se [p] está dentro do anel (ray casting; o anel pode estar aberto).
+bool pontoNoAnel(LatLng p, List<LatLng> anel) {
+  var dentro = false;
+  for (var i = 0, j = anel.length - 1; i < anel.length; j = i++) {
+    final a = anel[i];
+    final b = anel[j];
+    final cruza = (a.latitude > p.latitude) != (b.latitude > p.latitude) &&
+        p.longitude <
+            (b.longitude - a.longitude) *
+                    (p.latitude - a.latitude) /
+                    (b.latitude - a.latitude) +
+                a.longitude;
+    if (cruza) dentro = !dentro;
+  }
+  return dentro;
+}
+
+/// A região cujo contorno contém [ponto]. Se mais de uma contém (uma dentro
+/// da outra), vale a menor.
+Regiao? regiaoNoPonto(LatLng ponto, Iterable<Regiao> regioes) {
+  Regiao? achada;
+  var menor = double.infinity;
+  for (final r in regioes) {
+    if (!r.contornos
+        .any((anel) => anel.length >= 3 && pontoNoAnel(ponto, anel))) continue;
+    final area = r.areaKm2 ?? double.maxFinite;
+    if (achada == null || area < menor) {
+      achada = r;
+      menor = area;
+    }
+  }
+  return achada;
+}
+
 /// Distância aproximada em km (fórmula de haversine).
 double distanciaKm(LatLng a, LatLng b) {
   const r = 6371.0;
@@ -182,12 +223,15 @@ double distanciaKm(LatLng a, LatLng b) {
   final dLat = rad(b.latitude - a.latitude);
   final dLng = rad(b.longitude - a.longitude);
   final h = math.pow(math.sin(dLat / 2), 2) +
-      math.cos(rad(a.latitude)) * math.cos(rad(b.latitude)) * math.pow(math.sin(dLng / 2), 2);
+      math.cos(rad(a.latitude)) *
+          math.cos(rad(b.latitude)) *
+          math.pow(math.sin(dLng / 2), 2);
   return 2 * r * math.asin(math.sqrt(h));
 }
 
 /// Estação com coordenadas mais próxima de [ponto], até [raioKm].
-Estacao? estacaoMaisProxima(LatLng? ponto, List<Estacao> estacoes, {double raioKm = 150}) {
+Estacao? estacaoMaisProxima(LatLng? ponto, List<Estacao> estacoes,
+    {double raioKm = 150}) {
   if (ponto == null) return null;
   Estacao? melhor;
   var menor = double.infinity;

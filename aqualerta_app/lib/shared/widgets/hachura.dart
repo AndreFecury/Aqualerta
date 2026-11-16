@@ -88,12 +88,15 @@ class HachuraPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(HachuraPainter antigo) =>
-      antigo.severidade != severidade || antigo.cores != cores || antigo.forma != forma;
+      antigo.severidade != severidade ||
+      antigo.cores != cores ||
+      antigo.forma != forma;
 }
 
 /// Pequena amostra da hachura, usada como legenda ao lado do nome do nível.
 class AmostraHachura extends StatelessWidget {
-  const AmostraHachura({required this.severidade, this.tamanho = 18, super.key});
+  const AmostraHachura(
+      {required this.severidade, this.tamanho = 18, super.key});
 
   final Severidade severidade;
   final double tamanho;
@@ -103,14 +106,16 @@ class AmostraHachura extends StatelessWidget {
     return ExcludeSemantics(
       child: CustomPaint(
         size: Size.square(tamanho),
-        painter: HachuraPainter(severidade: severidade, cores: AquaColors.of(context)),
+        painter: HachuraPainter(
+            severidade: severidade, cores: AquaColors.of(context)),
       ),
     );
   }
 }
 
 /// Desenha [caminho] tracejado.
-void desenharTracejado(Canvas canvas, Path caminho, Paint tinta, {double traco = 5, double espaco = 3}) {
+void desenharTracejado(Canvas canvas, Path caminho, Paint tinta,
+    {double traco = 5, double espaco = 3}) {
   for (final ui.PathMetric metrica in caminho.computeMetrics()) {
     var distancia = 0.0;
     while (distancia < metrica.length) {

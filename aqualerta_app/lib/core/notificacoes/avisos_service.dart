@@ -46,7 +46,8 @@ class AvisosService {
           if (id != null && id.isNotEmpty) aoAbrirAlerta?.call(id);
         },
       );
-      final android = _local.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+      final android = _local.resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin>();
       await android?.createNotificationChannel(_canal);
       await android?.requestNotificationsPermission();
     } catch (e) {
@@ -66,7 +67,9 @@ class AvisosService {
       FirebaseMessaging.onMessage.listen((m) {
         final n = m.notification;
         if (n == null) return;
-        _mostrar(m.hashCode, n.title ?? 'AquaAlerta', n.body ?? '', m.data['alert_id'] as String?, som: true);
+        _mostrar(m.hashCode, n.title ?? 'AquaAlerta', n.body ?? '',
+            m.data['alert_id'] as String?,
+            som: true);
       });
       FirebaseMessaging.onMessageOpenedApp.listen((m) {
         final id = m.data['alert_id'] as String?;
@@ -100,7 +103,8 @@ class AvisosService {
     );
   }
 
-  Future<void> _mostrar(int id, String titulo, String texto, String? alertaId, {required bool som}) async {
+  Future<void> _mostrar(int id, String titulo, String texto, String? alertaId,
+      {required bool som}) async {
     if (kIsWeb) return;
     try {
       await _local.show(

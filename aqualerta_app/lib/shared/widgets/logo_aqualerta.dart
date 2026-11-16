@@ -11,7 +11,8 @@ class LogoAqualerta extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = AquaColors.of(context);
     return ExcludeSemantics(
-      child: CustomPaint(size: Size.square(tamanho), painter: _Gota(c.canal, c.aguaFunda)),
+      child: CustomPaint(
+          size: Size.square(tamanho), painter: _Gota(c.canal, c.aguaFunda)),
     );
   }
 }
@@ -27,7 +28,8 @@ class _Gota extends CustomPainter {
     final gota = Path()
       ..moveTo(w * 0.5, h * 0.06)
       ..cubicTo(w * 0.5, h * 0.06, w * 0.18, h * 0.42, w * 0.18, h * 0.62)
-      ..arcToPoint(Offset(w * 0.82, h * 0.62), radius: Radius.circular(w * 0.32), clockwise: false)
+      ..arcToPoint(Offset(w * 0.82, h * 0.62),
+          radius: Radius.circular(w * 0.32), clockwise: false)
       ..cubicTo(w * 0.82, h * 0.42, w * 0.5, h * 0.06, w * 0.5, h * 0.06)
       ..close();
     canvas.drawPath(gota, Paint()..color = corGota);
@@ -45,5 +47,6 @@ class _Gota extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_Gota old) => old.corGota != corGota || old.corOnda != corOnda;
+  bool shouldRepaint(_Gota old) =>
+      old.corGota != corGota || old.corOnda != corOnda;
 }
