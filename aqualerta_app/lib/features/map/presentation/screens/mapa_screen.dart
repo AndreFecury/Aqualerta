@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -37,6 +39,37 @@ class _MapaScreenState extends State<MapaScreen>
   String? _regiaoSelecionadaId;
   LatLng? _minhaPosicao;
   double _alturaMapa = 800;
+
+  // Aviso de mapa que não carrega: vários erros de tile em pouco tempo.
+  final _errosDeTile = <DateTime>[];
+  String? _ultimoErroDeTile;
+  bool _mapaComProblema = false;
+  Timer? _reavaliar;
+
+  void _erroDeTile(Object erro) {
+    final agora = DateTime.now();
+    _errosDeTile
+      ..add(agora)
+      ..removeWhere((t) => agora.difference(t) > const Duration(seconds: 10));
+    final texto = erro.toString().replaceAll(RegExp(r'\s+'), ' ');
+    _ultimoErroDeTile =
+        texto.length > 90 ? '${texto.substring(0, 90)}...' : texto;
+    if (!_mapaComProblema && _errosDeTile.length >= 5) {
+      Future.microtask(() {
+        if (!mounted) return;
+        setState(() => _mapaComProblema = true);
+        _reavaliar?.cancel();
+        _reavaliar = Timer.periodic(const Duration(seconds: 6), (_) {
+          final limite = DateTime.now().subtract(const Duration(seconds: 8));
+          if (_errosDeTile.every((t) => t.isBefore(limite)) && mounted) {
+            _reavaliar?.cancel();
+            setState(() => _mapaComProblema = false);
+          }
+        });
+      });
+    }
+  }
+
   late final AnimationController _voo = AnimationController(vsync: this);
 
   /// Leva a câmera até [destino] com uma transição suave. Em distâncias
@@ -93,6 +126,7 @@ class _MapaScreenState extends State<MapaScreen>
 
   @override
   void dispose() {
+    _reavaliar?.cancel();
     _voo.dispose();
     _busca.dispose();
     _mapa.dispose();
@@ -213,6 +247,8 @@ class _MapaScreenState extends State<MapaScreen>
                                   tileUpdateTransformer:
                                       TileUpdateTransformers.throttle(
                                           const Duration(milliseconds: 250)),
+                                  errorTileCallback: (_, erro, __) =>
+                                      _erroDeTile(erro),
                                   tileDisplay: const TileDisplay.fadeIn(
                                       duration: Duration(milliseconds: 180)),
                                 ),
@@ -356,6 +392,48 @@ class _MapaScreenState extends State<MapaScreen>
                             ),
                           ),
                         ),
+                        if (_mapaComProblema)
+                          Positioned(
+                            top: MediaQuery.paddingOf(context).top +
+                                (painel.erro != null ? 0 : 12) +
+                                64,
+                            left: 12,
+                            right: 72,
+                            child: Material(
+                              color: c.papel,
+                              elevation: 2,
+                              borderRadius: BorderRadius.circular(10),
+                              child: Padding(
+                                padding: const EdgeInsets.all(10),
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Icon(Icons.cloud_off,
+                                        size: 20, color: c.tinta2),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                              'O mapa de fundo não está carregando. Confira a internet.',
+                                              style: Theme.of(context)
+                                                  .textTheme
+                                                  .bodyMedium),
+                                          if (_ultimoErroDeTile != null)
+                                            Text(_ultimoErroDeTile!,
+                                                style: Theme.of(context)
+                                                    .textTheme
+                                                    .bodySmall),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
                         // Botões do mapa
                         Positioned(
                           right: 12,
