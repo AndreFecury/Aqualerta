@@ -82,4 +82,16 @@ void main() {
     await montar(t, const RiosScreen());
     expect(find.text('Sem leitura recente'), findsOneWidget);
   });
+
+  testWidgets('tocar numa região voa até ela e abre o cartão sem erro',
+      (t) async {
+    await montar(t, const MapaScreen());
+    final marcas = find.bySemanticsLabel(RegExp('risco'));
+    expect(marcas, findsWidgets);
+    await t.tap(marcas.first, warnIfMissed: false);
+    for (var i = 0; i < 30; i++) {
+      await t.pump(const Duration(milliseconds: 100));
+    }
+    expect(t.takeException(), isNull);
+  });
 }

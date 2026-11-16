@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -5,6 +7,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:aqualerta/core/config/mapas.dart';
+import 'package:aqualerta/core/config/tiles_em_cache.dart';
 import 'package:aqualerta/core/domain/carta.dart';
 import 'package:aqualerta/core/domain/severidade.dart';
 import 'package:aqualerta/core/state/painel_cubit.dart';
@@ -30,14 +33,69 @@ class MapaScreen extends StatefulWidget {
   State<MapaScreen> createState() => _MapaScreenState();
 }
 
-class _MapaScreenState extends State<MapaScreen> {
+class _MapaScreenState extends State<MapaScreen>
+    with SingleTickerProviderStateMixin {
   final _mapa = MapController();
   final _busca = TextEditingController();
   String? _regiaoSelecionadaId;
   LatLng? _minhaPosicao;
+  double _alturaMapa = 800;
+  late final AnimationController _voo = AnimationController(vsync: this);
+
+  /// Leva a câmera até [destino] com uma transição suave. Em distâncias
+  /// longas ela se afasta um pouco no meio do caminho, como um voo.
+  void _voar(LatLng destino, double zoomFinal) {
+    final cam = _mapa.camera;
+    final origem = cam.center;
+    final z0 = cam.zoom;
+    final z1 = zoomFinal.clamp(cam.minZoom ?? 3, cam.maxZoom ?? 19).toDouble();
+    final km = distanciaKm(origem, destino);
+    if (km < 0.02 && (z1 - z0).abs() < 0.05) return;
+    final recuo = (km / 60).clamp(0.0, 2.5);
+    final duracao = Duration(
+        milliseconds:
+            (500 + km * 6 + (z1 - z0).abs() * 80).clamp(500, 1500).round());
+    _voo.stop();
+    _voo.duration = duracao;
+    final curva = CurvedAnimation(parent: _voo, curve: Curves.easeInOutCubic);
+    void passo() {
+      final t = curva.value;
+      final zoom = z0 + (z1 - z0) * t - recuo * math.sin(math.pi * t);
+      _mapa.move(
+        LatLng(origem.latitude + (destino.latitude - origem.latitude) * t,
+            origem.longitude + (destino.longitude - origem.longitude) * t),
+        zoom.clamp(cam.minZoom ?? 3, cam.maxZoom ?? 19).toDouble(),
+      );
+    }
+
+    curva.addListener(passo);
+    _voo.forward(from: 0).whenComplete(() {
+      curva.removeListener(passo);
+      curva.dispose();
+    });
+  }
+
+  /// Seleciona a região e enquadra o município inteiro, sem cobrir o contorno
+  /// com o cartão de baixo.
+  void _selecionar(Regiao r) {
+    setState(() => _regiaoSelecionadaId = r.id);
+    final pontos = [for (final anel in r.contornos) ...anel];
+    if (pontos.length < 3) {
+      if (r.centro != null) _voar(r.centro!, 10);
+      return;
+    }
+    final enquadrado = CameraFit.bounds(
+      bounds: LatLngBounds.fromPoints(pontos),
+      padding: EdgeInsets.fromLTRB(
+          28, 84, 28, _alturaMapa * (0.34 - _alturaMinima) + 28),
+      maxZoom: 11,
+    ).fit(_mapa.camera);
+    _voar(enquadrado.center, enquadrado.zoom);
+  }
 
   @override
   void dispose() {
+    _voo.dispose();
     _busca.dispose();
     _mapa.dispose();
     super.dispose();
@@ -65,8 +123,7 @@ class _MapaScreenState extends State<MapaScreen> {
       );
       return;
     }
-    setState(() => _regiaoSelecionadaId = achada.id);
-    if (achada.centro != null) _mapa.move(achada.centro!, 11);
+    _selecionar(achada);
   }
 
   Future<void> _centralizarEmMim() async {
@@ -85,7 +142,7 @@ class _MapaScreenState extends State<MapaScreen> {
       final pos = await Geolocator.getCurrentPosition();
       final aqui = LatLng(pos.latitude, pos.longitude);
       setState(() => _minhaPosicao = aqui);
-      _mapa.move(aqui, 13);
+      _voar(aqui, 14.5);
     } catch (_) {
       aviso.showSnackBar(const SnackBar(
           content: Text('Não foi possível obter sua localização agora.')));
@@ -153,6 +210,16 @@ class _MapaScreenState extends State<MapaScreen> {
                                       RetinaMode.isHighDensity(context),
                                   maxNativeZoom: fundo.zoomMaximo,
                                   userAgentPackageName: 'br.com.aqualerta',
+                                  tileProvider: TilesEmCache(headers: const {
+                                    'User-Agent':
+                                        'flutter_map (br.com.aqualerta)'
+                                  }),
+                                  keepBuffer: 4,
+                                  panBuffer: 2,
+                                  evictErrorTileStrategy: EvictErrorTileStrategy
+                                      .notVisibleRespectMargin,
+                                  tileDisplay: const TileDisplay.fadeIn(
+                                      duration: Duration(milliseconds: 180)),
                                 ),
                               if (!FundoMapa.desligado &&
                                   fundo.sobreposicao != null)
@@ -162,6 +229,13 @@ class _MapaScreenState extends State<MapaScreen> {
                                   retinaMode: fundo.sobreposicao!.retina &&
                                       RetinaMode.isHighDensity(context),
                                   userAgentPackageName: 'br.com.aqualerta',
+                                  tileProvider: TilesEmCache(headers: const {
+                                    'User-Agent':
+                                        'flutter_map (br.com.aqualerta)'
+                                  }),
+                                  keepBuffer: 3,
+                                  evictErrorTileStrategy: EvictErrorTileStrategy
+                                      .notVisibleRespectMargin,
                                 ),
                               if (exibicao.mostra(Camada.areasAlagadas))
                                 PolygonLayer(polygons: [
