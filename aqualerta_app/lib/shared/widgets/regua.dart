@@ -6,8 +6,9 @@ import 'hachura.dart';
 
 /// A régua do rio: o elemento central da v3.
 ///
-/// Mostra o nível atual subindo sobre a escala da estação, com as cotas de
-/// alerta (laranja, tracejada) e de inundação (vermelha, tracejada).
+/// Mostra o nível atual sobre a escala da estação, com as cotas oficiais
+/// tracejadas: alerta (âmbar), inundação (laranja) e inundação severa
+/// (vermelha), cada uma na cor da severidade que ela abre.
 /// Sem leitura ([nivel] nulo), a régua aparece vazia e hachurada.
 class Regua extends StatelessWidget {
   const Regua({
@@ -32,9 +33,11 @@ class Regua extends StatelessWidget {
   String _descricao() {
     final nome = rio == null ? 'Régua do rio' : 'Régua do $rio';
     if (nivel == null) return '$nome: sem leitura recente';
-    return '$nome: ${formatarMetros(nivel!)} metros. '
-        'Cota de alerta ${formatarMetros(cotas.alerta)}, '
-        'cota de inundação ${formatarMetros(cotas.inundacao)}.';
+    final severa = cotas.severa;
+    return '$nome: ${formatarMetros(nivel!, casas: 2)} metros. '
+        'Cota de alerta ${formatarMetros(cotas.alerta, casas: 2)}, '
+        'cota de inundação ${formatarMetros(cotas.inundacao, casas: 2)}'
+        '${severa == null ? '' : ', inundação severa ${formatarMetros(severa, casas: 2)}'}.';
   }
 
   @override
@@ -81,11 +84,16 @@ class _ReguaPainter extends CustomPainter {
   final TextStyle estiloNumero;
   final TextScaler escalaTexto;
 
-  // Faixa da escala: um pouco abaixo da cota normal até um pouco acima da emergência.
-  double get _min =>
-      vertical ? (cotas.normal - 1).floorToDouble() : cotas.normal - (cotas.emergencia - cotas.normal) * 0.12;
-  double get _max =>
-      vertical ? (cotas.emergencia + 0.5).ceilToDouble() : cotas.emergencia + (cotas.emergencia - cotas.normal) * 0.06;
+  // Faixa da escala: do nível atual (ou de 4 m abaixo do alerta, se o rio
+  // estiver mais alto) até um pouco acima da cota mais alta. Na seca o rio
+  // fica muitos metros abaixo do alerta, e a régua precisa mostrar isso.
+  double get _base => [nivel ?? cotas.alerta, cotas.alerta - 4].reduce((a, b) => a < b ? a : b);
+  double get _min => vertical ? (_base - 1).floorToDouble() : _base - (cotas.topo - _base) * 0.08;
+  double get _max => vertical ? (cotas.topo + 0.5).ceilToDouble() : cotas.topo + (cotas.topo - _base) * 0.05;
+
+  // Com a escala longa (rio na seca), números a cada 2 m e marcas a cada 1 m.
+  double get _passoNumero => (_max - _min) > 14 ? 2 : 1;
+  double get _passoMarca => (_max - _min) > 14 ? 1 : 0.5;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -112,7 +120,7 @@ class _ReguaPainter extends CustomPainter {
       canvas.restore();
     }
 
-    // Marcas: a cada 0,5 m na vertical; 40 divisões na horizontal.
+    // Marcas: a cada 0,5 m (ou 1 m) na vertical; 40 divisões na horizontal.
     final maior = Paint()
       ..color = cores.tinta
       ..strokeWidth = 1.6;
@@ -120,9 +128,9 @@ class _ReguaPainter extends CustomPainter {
       ..color = cores.barro
       ..strokeWidth = 1.2;
     if (vertical) {
-      for (var v = _min; v <= _max + 1e-6; v += 0.5) {
+      for (var v = _min; v <= _max + 1e-6; v += _passoMarca) {
         final y = pos(v);
-        final inteiro = (v - v.roundToDouble()).abs() < 1e-6;
+        final inteiro = (v / _passoNumero - (v / _passoNumero).roundToDouble()).abs() < 1e-6;
         final comprimento = size.width * (inteiro ? 0.42 : 0.22);
         canvas.drawLine(Offset(size.width - comprimento, y), Offset(size.width, y), inteiro ? maior : menor);
         if (inteiro && mostrarNumeros) {
@@ -152,8 +160,9 @@ class _ReguaPainter extends CustomPainter {
 
     // Cotas tracejadas.
     for (final (valor, cor) in [
-      (cotas.alerta, cores.corDe(Severidade.alto)),
-      (cotas.inundacao, cores.corDe(Severidade.critico)),
+      (cotas.alerta, cores.corDe(Severidade.medio)),
+      (cotas.inundacao, cores.corDe(Severidade.alto)),
+      if (cotas.severa != null) (cotas.severa!, cores.corDe(Severidade.critico)),
     ]) {
       final p = pos(valor);
       final linha = Path();

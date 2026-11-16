@@ -398,8 +398,9 @@ class _FolhaRegiao extends StatelessWidget {
     } else {
       frase = 'Sem alertas ativos nesta região.';
     }
+    final tendencia = recente ? formatarTendencia(estacao!.variacao24h) : null;
     final fonte = recente
-        ? 'Leitura da ANA, ${formatarDataHora(estacao!.lidoEm!)}'
+        ? ['Leitura da ANA, ${formatarDataHora(estacao!.lidoEm!)}', if (tendencia != null) tendencia].join('. ')
         : (estacao != null ? 'Sem leitura recente da estação ${estacao!.nome}' : 'Sem estação da ANA próxima');
 
     return Container(

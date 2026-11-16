@@ -101,11 +101,17 @@ class _DetalheAlertaScreenState extends State<DetalheAlertaScreen> {
                     Text(alerta.texto, style: t.bodyLarge),
                     if (recente && estacao!.cotas != null) ...[
                       const SizedBox(height: 16),
-                      Text(formatarMetros(estacao.nivel!), style: t.displaySmall),
-                      Text('metros na régua', style: t.bodySmall),
+                      Text(formatarMetros(estacao.nivel!, casas: 2), style: t.displaySmall),
+                      Text(
+                        ['metros na régua', if (estacao.variacao24h != null) formatarTendencia(estacao.variacao24h)!.toLowerCase()].join(', '),
+                        style: t.bodySmall,
+                      ),
                       const SizedBox(height: 8),
                       Text(_relacao(estacao.nivel! - estacao.cotas!.alerta, 'do alerta'), style: t.bodyLarge),
                       Text(_relacao(estacao.nivel! - estacao.cotas!.inundacao, 'da inundação'), style: t.bodyLarge),
+                      if (estacao.cotas!.severa != null)
+                        Text(_relacao(estacao.nivel! - estacao.cotas!.severa!, 'da inundação severa'),
+                            style: t.bodyLarge),
                     ],
                     const SizedBox(height: 12),
                     Text(
@@ -113,7 +119,8 @@ class _DetalheAlertaScreenState extends State<DetalheAlertaScreen> {
                         alerta.regiaoNome,
                         'Emitido ${formatarDataHora(alerta.emitidoEm)}',
                         if (recente)
-                          'Estação ${estacao!.codigoAna} da ANA, leitura de ${formatarDataHora(estacao.lidoEm!)}'
+                          'Estação ${estacao!.codigoAna} da ANA, leitura de ${formatarDataHora(estacao.lidoEm!)}',
+                        if (estacao?.cotas != null) 'Cotas oficiais do Serviço Geológico do Brasil (SGB)'
                         else if (estacao != null)
                           'Estação ${estacao.codigoAna} da ANA sem leitura recente',
                       ].join('\n'),

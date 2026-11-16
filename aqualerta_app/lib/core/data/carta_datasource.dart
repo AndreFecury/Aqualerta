@@ -112,6 +112,7 @@ class CartaDatasource {
             cotas: _cotas(r),
             nivel: _d(r['water_level_m']),
             lidoEm: r['recorded_at'] != null ? DateTime.parse(r['recorded_at'] as String) : null,
+            nivel24h: _d(r['level_24h_m']),
           ),
       ];
     } on PostgrestException {
@@ -121,13 +122,11 @@ class CartaDatasource {
   }
 
   CotasEstacao? _cotas(Map<String, dynamic> r) {
-    final n = _d(r['normal_level_m']);
     final a = _d(r['alert_level_m']);
     final i = _d(r['flood_level_m']);
-    final e = _d(r['emergency_level_m']);
-    if (n == null || a == null || i == null || e == null) return null;
-    if (!(n <= a && a <= i && i <= e)) return null;
-    return CotasEstacao(normal: n, alerta: a, inundacao: i, emergencia: e);
+    final s = _d(r['emergency_level_m']);
+    if (a == null || i == null || a > i) return null;
+    return CotasEstacao(alerta: a, inundacao: i, severa: (s != null && s >= i) ? s : null);
   }
 
   /// Alertas ativos e os encerrados nos últimos 90 dias.

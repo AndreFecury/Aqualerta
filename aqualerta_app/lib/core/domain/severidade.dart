@@ -32,31 +32,39 @@ enum Severidade {
   bool operator >=(Severidade outra) => index >= outra.index;
 }
 
-/// Cotas de uma estação hidrológica da ANA (tabela `hydro_stations`), em metros.
+/// Cotas oficiais de uma estação, em metros, publicadas pelo SGB
+/// (Serviço Geológico do Brasil) nos Sistemas de Alerta Hidrológico.
+///
+/// - [alerta]: possibilidade elevada de inundação;
+/// - [inundacao]: o rio começa a atingir as primeiras casas;
+/// - [severa]: inundação severa. Nem toda estação tem essa cota.
 class CotasEstacao {
   const CotasEstacao({
-    required this.normal,
     required this.alerta,
     required this.inundacao,
-    required this.emergencia,
-  }) : assert(normal <= alerta && alerta <= inundacao && inundacao <= emergencia);
+    this.severa,
+  }) : assert(alerta <= inundacao && (severa == null || inundacao <= severa));
 
-  final double normal;
   final double alerta;
   final double inundacao;
-  final double emergencia;
+  final double? severa;
+
+  /// A cota mais alta que a estação tem.
+  double get topo => severa ?? inundacao;
 }
 
-/// Regra única de severidade do app: calculada pelo nível do rio comparado
-/// às cotas da estação. Assim o alerta e a régua nunca se contradizem.
+/// Regra única de severidade do app: o nível do rio comparado às cotas da
+/// estação. O banco gera os alertas com a mesma regra, então o alerta e a
+/// régua nunca se contradizem.
 ///
-/// - abaixo da cota normal: [Severidade.baixo]
-/// - da cota normal até antes da cota de alerta: [Severidade.medio]
-/// - da cota de alerta até antes da cota de inundação: [Severidade.alto]
-/// - a partir da cota de inundação: [Severidade.critico]
+/// - abaixo da cota de alerta: [Severidade.baixo]
+/// - da cota de alerta até antes da inundação: [Severidade.medio]
+/// - da cota de inundação até antes da severa: [Severidade.alto]
+/// - a partir da cota de inundação severa: [Severidade.critico]
 Severidade severidadePorCota(double nivel, CotasEstacao cotas) {
-  if (nivel >= cotas.inundacao) return Severidade.critico;
-  if (nivel >= cotas.alerta) return Severidade.alto;
-  if (nivel >= cotas.normal) return Severidade.medio;
+  final severa = cotas.severa;
+  if (severa != null && nivel >= severa) return Severidade.critico;
+  if (nivel >= cotas.inundacao) return Severidade.alto;
+  if (nivel >= cotas.alerta) return Severidade.medio;
   return Severidade.baixo;
 }

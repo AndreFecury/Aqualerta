@@ -102,8 +102,9 @@ class _Legenda extends StatelessWidget {
         spacing: 16,
         runSpacing: 6,
         children: [
-          item(c.corDe(Severidade.alto), 'Cota de alerta'),
-          item(c.corDe(Severidade.critico), 'Cota de inundação'),
+          item(c.corDe(Severidade.medio), 'Cota de alerta'),
+          item(c.corDe(Severidade.alto), 'Cota de inundação'),
+          item(c.corDe(Severidade.critico), 'Inundação severa'),
           item(c.tinta, 'Nível agora', tracejado: false),
         ],
       ),
@@ -127,13 +128,14 @@ class _LinhaEstacao extends StatelessWidget {
     String? situacao;
     if (recente && cotas != null) {
       final n = estacao.nivel!;
-      situacao = n >= cotas.inundacao
-          ? 'Acima da inundação'
-          : n >= cotas.alerta
-              ? 'Acima do alerta'
-              : n >= cotas.normal
-                  ? 'Acima do normal'
-                  : 'Normal';
+      final severa = cotas.severa;
+      situacao = severa != null && n >= severa
+          ? 'Acima da inundação severa'
+          : n >= cotas.inundacao
+              ? 'Acima da inundação'
+              : n >= cotas.alerta
+                  ? 'Acima do alerta'
+                  : '${formatarDiferenca(cotas.alerta - n)} abaixo do alerta';
     }
 
     return Container(
@@ -161,7 +163,7 @@ class _LinhaEstacao extends StatelessWidget {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      Text('${formatarMetros(estacao.nivel!)} m', style: t.titleLarge),
+                      Text('${formatarMetros(estacao.nivel!, casas: 2)} m', style: t.titleLarge),
                       if (situacao != null)
                         Text(situacao, style: t.labelSmall!.copyWith(color: s == null ? c.tinta2 : c.textoDe(s))),
                     ],
@@ -176,8 +178,12 @@ class _LinhaEstacao extends StatelessWidget {
             Regua(cotas: cotas, nivel: recente ? estacao.nivel : null, rio: estacao.titulo, direcao: Axis.horizontal),
             const SizedBox(height: 8),
             Text(
-              'Alerta ${formatarMetros(cotas.alerta)} m, inundação ${formatarMetros(cotas.inundacao)} m.'
-              '${recente ? ' Leitura ${formatarHaQuanto(estacao.lidoEm!)}.' : ''}',
+              [
+                'Alerta ${formatarMetros(cotas.alerta, casas: 2)} m, inundação ${formatarMetros(cotas.inundacao, casas: 2)} m'
+                    '${cotas.severa == null ? '' : ', severa ${formatarMetros(cotas.severa!, casas: 2)} m'}.',
+                if (recente && estacao.variacao24h != null) '${formatarTendencia(estacao.variacao24h)}.',
+                if (recente) 'Leitura ${formatarHaQuanto(estacao.lidoEm!)}.',
+              ].join(' '),
               style: t.bodySmall,
             ),
           ],

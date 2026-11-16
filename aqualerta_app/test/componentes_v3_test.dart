@@ -6,7 +6,7 @@ import 'package:aqualerta/shared/theme/aqua_theme.dart';
 import 'package:aqualerta/shared/widgets/regua.dart';
 import 'package:aqualerta/shared/widgets/selo_severidade.dart';
 
-const _manaus = CotasEstacao(normal: 22, alerta: 27, inundacao: 29, emergencia: 29.5);
+const _manaus = CotasEstacao(alerta: 27, inundacao: 27.5, severa: 29);
 
 Widget _app(Widget filho, {ThemeData? tema, double escala = 1}) => MaterialApp(
       theme: tema ?? AquaTheme.claro,
@@ -22,12 +22,23 @@ void main() {
     expect(formatarMetros(27), '27');
     expect(formatarDiferenca(0.3), '30 cm');
     expect(formatarDiferenca(1.7), '1,7 m');
+    expect(formatarMetros(8.43, casas: 2), '8,43');
+    expect(formatarTendencia(0.12), 'Subiu 12 cm em 24 h');
+    expect(formatarTendencia(-1.2), 'Desceu 1,2 m em 24 h');
+    expect(formatarTendencia(0.004), 'Estável em 24 h');
+    expect(formatarTendencia(null), isNull);
+  });
+
+  testWidgets('régua na seca mostra o rio muito abaixo do alerta sem quebrar', (t) async {
+    await t.pumpWidget(_app(const Regua(cotas: _manaus, nivel: 16.14, rio: 'Rio Negro')));
+    expect(find.bySemanticsLabel(RegExp(r'16,14 metros.*inundação severa 29')), findsOneWidget);
+    expect(t.takeException(), isNull);
   });
 
   testWidgets('régua descreve o nível para leitores de tela', (t) async {
     await t.pumpWidget(_app(const Regua(cotas: _manaus, nivel: 27.3, rio: 'Rio Negro')));
     expect(
-      find.bySemanticsLabel(RegExp(r'Régua do Rio Negro: 27,3 metros')),
+      find.bySemanticsLabel(RegExp(r'Régua do Rio Negro: 27,30 metros')),
       findsOneWidget,
     );
   });

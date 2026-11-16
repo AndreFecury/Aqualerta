@@ -14,6 +14,14 @@ String formatarDiferenca(double metros) {
   return '${formatarMetros(m)} m';
 }
 
+/// Tendência do rio em 24 horas: "Subiu 12 cm em 24 h", "Desceu 1,2 m em
+/// 24 h" ou "Estável em 24 h". Nulo sem a leitura de 24 horas atrás.
+String? formatarTendencia(double? variacao) {
+  if (variacao == null) return null;
+  if (variacao.abs() < 0.01) return 'Estável em 24 h';
+  return '${variacao > 0 ? 'Subiu' : 'Desceu'} ${formatarDiferenca(variacao)} em 24 h';
+}
+
 /// Há quanto tempo, em linguagem simples: "agora", "há 12 min", "há 5 h",
 /// "ontem", "há 3 dias".
 String formatarHaQuanto(DateTime quando, {DateTime? agora}) {

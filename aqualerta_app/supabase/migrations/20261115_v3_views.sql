@@ -80,17 +80,3 @@ BEGIN
         ALTER PUBLICATION supabase_realtime ADD TABLE public.hydro_readings;
     END IF;
 END $$;
-
--- ============================================================
--- Dados de exemplo (opcional, remova em produção).
--- São os mesmos valores usados nos alertas de exemplo do schema.sql.
--- ============================================================
-/*
-INSERT INTO public.hydro_readings (station_id, recorded_at, water_level_m, source)
-SELECT id, now() - interval '12 minutes', 27.30, 'EXEMPLO'
-FROM public.hydro_stations WHERE ana_code = '14390000';
-
-INSERT INTO public.hydro_readings (station_id, recorded_at, water_level_m, source)
-SELECT id, now() - interval '5 hours', 15.20, 'EXEMPLO'
-FROM public.hydro_stations WHERE ana_code = '15400000';
-*/

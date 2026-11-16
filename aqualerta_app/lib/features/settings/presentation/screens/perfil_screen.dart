@@ -124,7 +124,9 @@ class PerfilScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 28),
                 const TituloSecao('Fontes de dados'),
-                _LinhaFonte(nome: 'ANA, nível dos rios', estado: 'Ativa', cor: c.textoDe(Severidade.baixo)),
+                _LinhaFonte(nome: 'ANA, nível dos rios a cada 30 min', estado: 'Ativa', cor: c.textoDe(Severidade.baixo)),
+                _LinhaFonte(nome: 'SGB, cotas de alerta e inundação', estado: 'Ativa', cor: c.textoDe(Severidade.baixo)),
+                _LinhaFonte(nome: 'IBGE, limites dos municípios', estado: 'Ativa', cor: c.textoDe(Severidade.baixo)),
                 _LinhaFonte(nome: 'Copernicus, satélite', estado: 'Em breve', cor: c.tinta2),
                 const SizedBox(height: 28),
                 OutlinedButton(

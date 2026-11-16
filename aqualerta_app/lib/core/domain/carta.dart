@@ -71,6 +71,7 @@ class Estacao extends Equatable {
     this.cotas,
     this.nivel,
     this.lidoEm,
+    this.nivel24h,
   });
 
   final String id;
@@ -81,6 +82,12 @@ class Estacao extends Equatable {
   final CotasEstacao? cotas;
   final double? nivel;
   final DateTime? lidoEm;
+
+  /// Nível cerca de 24 horas antes da última leitura.
+  final double? nivel24h;
+
+  /// Quanto o rio mudou em 24 horas, em metros (positivo: subiu).
+  double? get variacao24h => (nivel != null && nivel24h != null) ? nivel! - nivel24h! : null;
 
   /// Leituras com mais de 2 dias não contam como "agora".
   static const validadeLeitura = Duration(hours: 48);
@@ -95,7 +102,7 @@ class Estacao extends Equatable {
   String get titulo => rio ?? nome;
 
   @override
-  List<Object?> get props => [id, nivel, lidoEm];
+  List<Object?> get props => [id, nivel, lidoEm, nivel24h];
 }
 
 /// Alerta já com a severidade que o app mostra.
