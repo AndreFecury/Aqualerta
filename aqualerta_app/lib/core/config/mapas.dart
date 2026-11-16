@@ -62,20 +62,20 @@ class FundoMapa {
             zoomMaximo: 20),
         TipoMapa.hibrido => const FundoMapa(
             url:
-                'https://api.maptiler.com/maps/hybrid/{z}/{x}/{y}.jpg?key=$_chave',
+                'https://api.maptiler.com/maps/hybrid/256/{z}/{x}/{y}.jpg?key=$_chave',
             atribuicao: _creditoMapTiler,
             zoomMaximo: 20),
         TipoMapa.terreno => const FundoMapa(
             url:
-                'https://api.maptiler.com/maps/outdoor-v2/{z}/{x}/{y}.png?key=$_chave',
+                'https://api.maptiler.com/maps/outdoor-v2/256/{z}/{x}/{y}.webp?key=$_chave',
             atribuicao: _creditoMapTiler),
         TipoMapa.ruas => const FundoMapa(
             url:
-                'https://api.maptiler.com/maps/streets-v2/{z}/{x}/{y}.png?key=$_chave',
+                'https://api.maptiler.com/maps/streets-v2/256/{z}/{x}/{y}.webp?key=$_chave',
             atribuicao: _creditoMapTiler),
         _ => FundoMapa(
             url:
-                'https://api.maptiler.com/maps/${escuro ? 'dataviz-dark' : 'dataviz'}/{z}/{x}/{y}.png?key=$_chave',
+                'https://api.maptiler.com/maps/${escuro ? 'dataviz-dark' : 'dataviz'}/256/{z}/{x}/{y}.webp?key=$_chave',
             atribuicao: _creditoMapTiler),
       };
     }

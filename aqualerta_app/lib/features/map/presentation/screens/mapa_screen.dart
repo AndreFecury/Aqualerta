@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -7,7 +5,6 @@ import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:aqualerta/core/config/mapas.dart';
-import 'package:aqualerta/core/config/tiles_em_cache.dart';
 import 'package:aqualerta/core/domain/carta.dart';
 import 'package:aqualerta/core/domain/severidade.dart';
 import 'package:aqualerta/core/state/painel_cubit.dart';
@@ -43,7 +40,8 @@ class _MapaScreenState extends State<MapaScreen>
   late final AnimationController _voo = AnimationController(vsync: this);
 
   /// Leva a câmera até [destino] com uma transição suave. Em distâncias
-  /// longas ela se afasta um pouco no meio do caminho, como um voo.
+  /// Sem afastar no meio do caminho: cada nível de zoom que a câmera cruza
+  /// pede mapa novo, e isso deixava tudo lento.
   void _voar(LatLng destino, double zoomFinal) {
     final cam = _mapa.camera;
     final origem = cam.center;
@@ -51,16 +49,16 @@ class _MapaScreenState extends State<MapaScreen>
     final z1 = zoomFinal.clamp(cam.minZoom ?? 3, cam.maxZoom ?? 19).toDouble();
     final km = distanciaKm(origem, destino);
     if (km < 0.02 && (z1 - z0).abs() < 0.05) return;
-    final recuo = (km / 60).clamp(0.0, 2.5);
+
     final duracao = Duration(
         milliseconds:
-            (500 + km * 6 + (z1 - z0).abs() * 80).clamp(500, 1500).round());
+            (450 + km * 2 + (z1 - z0).abs() * 60).clamp(450, 900).round());
     _voo.stop();
     _voo.duration = duracao;
     final curva = CurvedAnimation(parent: _voo, curve: Curves.easeInOutCubic);
     void passo() {
       final t = curva.value;
-      final zoom = z0 + (z1 - z0) * t - recuo * math.sin(math.pi * t);
+      final zoom = z0 + (z1 - z0) * t;
       _mapa.move(
         LatLng(origem.latitude + (destino.latitude - origem.latitude) * t,
             origem.longitude + (destino.longitude - origem.longitude) * t),
@@ -210,11 +208,11 @@ class _MapaScreenState extends State<MapaScreen>
                                       RetinaMode.isHighDensity(context),
                                   maxNativeZoom: fundo.zoomMaximo,
                                   userAgentPackageName: 'br.com.aqualerta',
-                                  tileProvider: TilesEmCache(),
-                                  keepBuffer: 4,
-                                  panBuffer: 2,
                                   evictErrorTileStrategy: EvictErrorTileStrategy
                                       .notVisibleRespectMargin,
+                                  tileUpdateTransformer:
+                                      TileUpdateTransformers.throttle(
+                                          const Duration(milliseconds: 250)),
                                   tileDisplay: const TileDisplay.fadeIn(
                                       duration: Duration(milliseconds: 180)),
                                 ),
@@ -226,10 +224,11 @@ class _MapaScreenState extends State<MapaScreen>
                                   retinaMode: fundo.sobreposicao!.retina &&
                                       RetinaMode.isHighDensity(context),
                                   userAgentPackageName: 'br.com.aqualerta',
-                                  tileProvider: TilesEmCache(),
-                                  keepBuffer: 3,
                                   evictErrorTileStrategy: EvictErrorTileStrategy
                                       .notVisibleRespectMargin,
+                                  tileUpdateTransformer:
+                                      TileUpdateTransformers.throttle(
+                                          const Duration(milliseconds: 250)),
                                 ),
                               if (exibicao.mostra(Camada.areasAlagadas))
                                 PolygonLayer(polygons: [
