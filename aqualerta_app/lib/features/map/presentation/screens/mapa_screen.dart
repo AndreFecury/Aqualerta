@@ -210,10 +210,7 @@ class _MapaScreenState extends State<MapaScreen>
                                       RetinaMode.isHighDensity(context),
                                   maxNativeZoom: fundo.zoomMaximo,
                                   userAgentPackageName: 'br.com.aqualerta',
-                                  tileProvider: TilesEmCache(headers: const {
-                                    'User-Agent':
-                                        'flutter_map (br.com.aqualerta)'
-                                  }),
+                                  tileProvider: TilesEmCache(),
                                   keepBuffer: 4,
                                   panBuffer: 2,
                                   evictErrorTileStrategy: EvictErrorTileStrategy
@@ -229,10 +226,7 @@ class _MapaScreenState extends State<MapaScreen>
                                   retinaMode: fundo.sobreposicao!.retina &&
                                       RetinaMode.isHighDensity(context),
                                   userAgentPackageName: 'br.com.aqualerta',
-                                  tileProvider: TilesEmCache(headers: const {
-                                    'User-Agent':
-                                        'flutter_map (br.com.aqualerta)'
-                                  }),
+                                  tileProvider: TilesEmCache(),
                                   keepBuffer: 3,
                                   evictErrorTileStrategy: EvictErrorTileStrategy
                                       .notVisibleRespectMargin,
