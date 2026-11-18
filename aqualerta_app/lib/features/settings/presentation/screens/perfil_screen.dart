@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:aqualerta/core/domain/severidade.dart';
+import 'package:aqualerta/core/notificacoes/avisos_service.dart';
 import 'package:aqualerta/core/state/painel_cubit.dart';
 import 'package:aqualerta/features/settings/presentation/cubit/aparencia_cubit.dart';
 import 'package:aqualerta/features/settings/presentation/cubit/notificacoes_cubit.dart';
@@ -170,7 +171,10 @@ class PerfilScreen extends StatelessWidget {
                     foregroundColor: c.textoDe(Severidade.critico),
                     side: BorderSide(color: c.linha, width: 1.5),
                   ),
-                  onPressed: () => Supabase.instance.client.auth.signOut(),
+                  onPressed: () async {
+                    await AvisosService.instancia.esquecerAparelho();
+                    await Supabase.instance.client.auth.signOut();
+                  },
                   child: const Text('Sair da conta'),
                 ),
                 const SizedBox(height: 16),

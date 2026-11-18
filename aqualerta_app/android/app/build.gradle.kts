@@ -1,5 +1,6 @@
 plugins {
     id("com.android.application")
+    id("com.google.gms.google-services")
     // O plugin do Flutter precisa vir depois dos plugins do Android e do Kotlin.
     id("dev.flutter.flutter-gradle-plugin")
 }
