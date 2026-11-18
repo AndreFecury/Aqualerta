@@ -7,6 +7,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:aqualerta/core/config/mapas.dart';
+import 'package:aqualerta/shared/widgets/logo_maptiler.dart';
 import 'package:aqualerta/core/domain/carta.dart';
 import 'package:aqualerta/core/domain/severidade.dart';
 import 'package:aqualerta/core/state/painel_cubit.dart';
@@ -46,14 +47,26 @@ class _MapaScreenState extends State<MapaScreen>
   bool _mapaComProblema = false;
   Timer? _reavaliar;
 
-  void _erroDeTile(Object erro) {
+  // Troca automática para os mapas gratuitos quando o MapTiler falha.
+  bool _avisoReserva = false;
+  Timer? _fimAvisoReserva;
+  Timer? _fimReserva;
+
+  void _erroDeTile(Object erro, {required bool doMapTiler}) {
+    final texto = erro.toString().replaceAll(RegExp(r'\s+'), ' ');
+    _ultimoErroDeTile =
+        texto.length > 90 ? '${texto.substring(0, 90)}...' : texto;
+    if (doMapTiler) {
+      // Falha do MapTiler não conta para o aviso: o app troca de mapa.
+      if (FundoMapa.registrarFalhaDoMapTiler()) {
+        Future.microtask(_mostrarTroca);
+      }
+      return;
+    }
     final agora = DateTime.now();
     _errosDeTile
       ..add(agora)
       ..removeWhere((t) => agora.difference(t) > const Duration(seconds: 10));
-    final texto = erro.toString().replaceAll(RegExp(r'\s+'), ' ');
-    _ultimoErroDeTile =
-        texto.length > 90 ? '${texto.substring(0, 90)}...' : texto;
     if (!_mapaComProblema && _errosDeTile.length >= 5) {
       Future.microtask(() {
         if (!mounted) return;
@@ -68,6 +81,20 @@ class _MapaScreenState extends State<MapaScreen>
         });
       });
     }
+  }
+
+  void _mostrarTroca() {
+    if (!mounted) return;
+    setState(() => _avisoReserva = true);
+    _fimAvisoReserva?.cancel();
+    _fimAvisoReserva = Timer(const Duration(seconds: 8), () {
+      if (mounted) setState(() => _avisoReserva = false);
+    });
+    // Passado o tempo da reserva, redesenha para tentar o MapTiler de novo.
+    _fimReserva?.cancel();
+    _fimReserva = Timer(FundoMapa.tempoNaReserva, () {
+      if (mounted) setState(() {});
+    });
   }
 
   late final AnimationController _voo = AnimationController(vsync: this);
@@ -127,6 +154,8 @@ class _MapaScreenState extends State<MapaScreen>
   @override
   void dispose() {
     _reavaliar?.cancel();
+    _fimAvisoReserva?.cancel();
+    _fimReserva?.cancel();
     _voo.dispose();
     _busca.dispose();
     _mapa.dispose();
@@ -236,6 +265,7 @@ class _MapaScreenState extends State<MapaScreen>
                             children: [
                               if (!FundoMapa.desligado)
                                 TileLayer(
+                                  key: ValueKey(fundo.url),
                                   urlTemplate: fundo.url,
                                   subdomains: fundo.subdominios,
                                   retinaMode: fundo.retina &&
@@ -248,7 +278,8 @@ class _MapaScreenState extends State<MapaScreen>
                                       TileUpdateTransformers.throttle(
                                           const Duration(milliseconds: 250)),
                                   errorTileCallback: (_, erro, __) =>
-                                      _erroDeTile(erro),
+                                      _erroDeTile(erro,
+                                          doMapTiler: fundo.ehMapTiler),
                                   tileDisplay: const TileDisplay.fadeIn(
                                       duration: Duration(milliseconds: 180)),
                                 ),
@@ -366,6 +397,15 @@ class _MapaScreenState extends State<MapaScreen>
                                     ),
                                   ),
                               ]),
+                              if (!FundoMapa.desligado && fundo.ehMapTiler)
+                                const Align(
+                                  alignment: Alignment.bottomLeft,
+                                  child: Padding(
+                                    padding:
+                                        EdgeInsets.only(left: 52, bottom: 10),
+                                    child: LogoMapTiler(),
+                                  ),
+                                ),
                               RichAttributionWidget(
                                 alignment: AttributionAlignment.bottomLeft,
                                 showFlutterMapAttribution: false,
@@ -392,6 +432,36 @@ class _MapaScreenState extends State<MapaScreen>
                             ),
                           ),
                         ),
+                        if (_avisoReserva && !_mapaComProblema)
+                          Positioned(
+                            top: MediaQuery.paddingOf(context).top +
+                                (painel.erro != null ? 0 : 12) +
+                                64,
+                            left: 12,
+                            right: 72,
+                            child: Material(
+                              color: c.papel,
+                              elevation: 2,
+                              borderRadius: BorderRadius.circular(10),
+                              child: Padding(
+                                padding: const EdgeInsets.all(10),
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.swap_horiz,
+                                        size: 20, color: c.tinta2),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                          'O MapTiler não respondeu nesta rede. Mostrando o mapa alternativo.',
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodyMedium),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
                         if (_mapaComProblema)
                           Positioned(
                             top: MediaQuery.paddingOf(context).top +

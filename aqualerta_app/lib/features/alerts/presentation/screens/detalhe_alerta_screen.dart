@@ -6,6 +6,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:aqualerta/core/config/mapas.dart';
+import 'package:aqualerta/shared/widgets/logo_maptiler.dart';
 import 'package:aqualerta/core/domain/carta.dart';
 import 'package:aqualerta/core/state/painel_cubit.dart';
 import 'package:aqualerta/core/utils/formato.dart';
@@ -250,9 +251,15 @@ class _MiniCarta extends StatelessWidget {
         children: [
           if (!FundoMapa.desligado)
             TileLayer(
+                key: ValueKey(fundo.url),
                 urlTemplate: fundo.url,
                 subdomains: fundo.subdominios,
-                userAgentPackageName: 'br.com.aqualerta'),
+                userAgentPackageName: 'br.com.aqualerta',
+                // Sem internet o mini-mapa só fica sem fundo; se for o
+                // MapTiler que falha, o app passa para o mapa gratuito.
+                errorTileCallback: (_, __, ___) {
+                  if (fundo.ehMapTiler) FundoMapa.registrarFalhaDoMapTiler();
+                }),
           PolygonLayer(polygons: [
             for (final a in contornos)
               if (a.length >= 3)
@@ -262,6 +269,14 @@ class _MiniCarta extends StatelessWidget {
                     borderColor: cor,
                     borderStrokeWidth: 2.5),
           ]),
+          if (!FundoMapa.desligado && fundo.ehMapTiler)
+            const Align(
+              alignment: Alignment.bottomLeft,
+              child: Padding(
+                padding: EdgeInsets.only(left: 8, bottom: 8),
+                child: LogoMapTiler(),
+              ),
+            ),
           RichAttributionWidget(
               showFlutterMapAttribution: false,
               attributions: [TextSourceAttribution(fundo.atribuicao)]),

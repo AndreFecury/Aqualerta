@@ -30,11 +30,58 @@ class FundoMapa {
   /// Camada desenhada por cima (os nomes de lugares, no mapa híbrido).
   final FundoMapa? sobreposicao;
 
-  static const _chave = String.fromEnvironment('MAPTILER_KEY');
+  static const _chaveDoBuild = String.fromEnvironment('MAPTILER_KEY');
+
+  /// Só para testes: finge que o app foi compilado com uma chave.
+  @visibleForTesting
+  static String? chaveDeTeste;
+  static String get _chave => chaveDeTeste ?? _chaveDoBuild;
 
   /// Desliga o mapa de fundo (usado nos testes, que não têm internet).
   static bool desligado = false;
   static bool get temMapTiler => _chave.isNotEmpty;
+
+  // ---- Reserva: quando o MapTiler falha (rede que bloqueia
+  // api.maptiler.com, cota estourada, chave revogada), o app usa os mapas
+  // gratuitos por [tempoNaReserva] e depois tenta o MapTiler de novo.
+  static DateTime? _reservaDesde;
+  static Duration tempoNaReserva = const Duration(minutes: 15);
+
+  static bool get usandoReserva =>
+      _reservaDesde != null &&
+      DateTime.now().difference(_reservaDesde!) < tempoNaReserva;
+
+  /// O MapTiler está sendo usado agora (tem chave e não está na reserva).
+  static bool get usaMapTiler => temMapTiler && !usandoReserva;
+
+  static void trocarParaReserva() {
+    _reservaDesde = DateTime.now();
+    _falhasMapTiler.clear();
+  }
+
+  static final _falhasMapTiler = <DateTime>[];
+
+  /// Conta um tile do MapTiler que falhou. Com 4 falhas em 10 s o app passa
+  /// para os mapas gratuitos; devolve true quando essa troca acontece agora.
+  static bool registrarFalhaDoMapTiler() {
+    if (!usaMapTiler) return false;
+    final agora = DateTime.now();
+    _falhasMapTiler
+      ..add(agora)
+      ..removeWhere((t) => agora.difference(t) > const Duration(seconds: 10));
+    if (_falhasMapTiler.length < 4) return false;
+    trocarParaReserva();
+    return true;
+  }
+
+  @visibleForTesting
+  static void voltarAoMapTiler() {
+    _reservaDesde = null;
+    _falhasMapTiler.clear();
+  }
+
+  /// Este fundo vem do MapTiler (e precisa mostrar o logo dele).
+  bool get ehMapTiler => url.contains('api.maptiler.com');
 
   static const _creditoCarto = '© CARTO © colaboradores do OpenStreetMap';
   static const _creditoMapTiler = '© MapTiler © colaboradores do OpenStreetMap';
@@ -53,29 +100,30 @@ class FundoMapa {
   static FundoMapa para(TipoMapa tipo, Brightness brilho) {
     final escuro = brilho == Brightness.dark;
     final efetivo = tipo == TipoMapa.automatico ? TipoMapa.carta : tipo;
-    if (temMapTiler) {
+    if (usaMapTiler) {
+      final chave = _chave;
       return switch (efetivo) {
-        TipoMapa.satelite => const FundoMapa(
+        TipoMapa.satelite => FundoMapa(
             url:
-                'https://api.maptiler.com/tiles/satellite-v2/{z}/{x}/{y}.jpg?key=$_chave',
+                'https://api.maptiler.com/tiles/satellite-v2/{z}/{x}/{y}.jpg?key=$chave',
             atribuicao: _creditoMapTiler,
             zoomMaximo: 20),
-        TipoMapa.hibrido => const FundoMapa(
+        TipoMapa.hibrido => FundoMapa(
             url:
-                'https://api.maptiler.com/maps/hybrid/256/{z}/{x}/{y}.jpg?key=$_chave',
+                'https://api.maptiler.com/maps/hybrid/256/{z}/{x}/{y}.jpg?key=$chave',
             atribuicao: _creditoMapTiler,
             zoomMaximo: 20),
-        TipoMapa.terreno => const FundoMapa(
+        TipoMapa.terreno => FundoMapa(
             url:
-                'https://api.maptiler.com/maps/outdoor-v2/256/{z}/{x}/{y}.png?key=$_chave',
+                'https://api.maptiler.com/maps/outdoor-v2/256/{z}/{x}/{y}.png?key=$chave',
             atribuicao: _creditoMapTiler),
-        TipoMapa.ruas => const FundoMapa(
+        TipoMapa.ruas => FundoMapa(
             url:
-                'https://api.maptiler.com/maps/streets-v2/256/{z}/{x}/{y}.png?key=$_chave',
+                'https://api.maptiler.com/maps/streets-v2/256/{z}/{x}/{y}.png?key=$chave',
             atribuicao: _creditoMapTiler),
         _ => FundoMapa(
             url:
-                'https://api.maptiler.com/maps/${escuro ? 'dataviz-dark' : 'dataviz'}/256/{z}/{x}/{y}.png?key=$_chave',
+                'https://api.maptiler.com/maps/${escuro ? 'dataviz-dark' : 'dataviz'}/256/{z}/{x}/{y}.png?key=$chave',
             atribuicao: _creditoMapTiler),
       };
     }

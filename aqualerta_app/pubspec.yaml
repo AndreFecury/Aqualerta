@@ -70,6 +70,7 @@ flutter:
   assets:
     - assets/icons/
     - assets/animations/
+    - assets/logos/
 
   fonts:
     # Fonte da v3: feita para pessoas com baixa visão (licença OFL em assets/fonts)
