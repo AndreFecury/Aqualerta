@@ -67,19 +67,28 @@ class Painel extends Equatable {
   }
 
   /// A região mostrada no topo do mapa: a primeira que o usuário segue; se ele
-  /// não segue nenhuma, a de maior risco agora.
+  /// não segue nenhuma, a de maior risco agora. Empate (por exemplo, todos
+  /// os rios baixos) fica com Manaus, onde o app abre.
   Regiao? get regiaoPrincipal {
     for (final r in regioes) {
       if (seguidas.contains(r.id)) return r;
     }
     Regiao? pior;
     for (final r in regioes) {
-      if (pior == null ||
-          severidadeDaRegiao(r.id).index > severidadeDaRegiao(pior.id).index)
+      if (pior == null) {
         pior = r;
+        continue;
+      }
+      final a = severidadeDaRegiao(r.id).index;
+      final b = severidadeDaRegiao(pior.id).index;
+      if (a > b || (a == b && _ehManaus(r) && !_ehManaus(pior))) pior = r;
     }
     return pior;
   }
+
+  static bool _ehManaus(Regiao r) =>
+      r.nome.trim().toLowerCase() == 'manaus' ||
+      (r.municipio?.trim().toLowerCase() == 'manaus');
 
   bool get principalEhSeguida =>
       regiaoPrincipal != null && seguidas.contains(regiaoPrincipal!.id);

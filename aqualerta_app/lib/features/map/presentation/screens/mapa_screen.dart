@@ -47,6 +47,9 @@ class _MapaScreenState extends State<MapaScreen>
   bool _mapaComProblema = false;
   Timer? _reavaliar;
 
+  bool _centrouNaAbertura = false;
+  bool _mexeuNoMapa = false;
+
   // Troca automática para os mapas gratuitos quando o MapTiler falha.
   bool _avisoReserva = false;
   Timer? _fimAvisoReserva;
@@ -224,6 +227,19 @@ class _MapaScreenState extends State<MapaScreen>
         painel.regiaoPrincipal;
     final estacao = painel.estacaoDaRegiao(regiao);
 
+    // Os dados chegam depois do primeiro desenho do mapa (que abre em
+    // Manaus). Uma vez só, leva a câmera até a região principal, se a
+    // pessoa ainda não mexeu no mapa.
+    if (!_centrouNaAbertura && painel.temDados && regiao?.centro != null) {
+      _centrouNaAbertura = true;
+      final alvo = regiao!.centro!;
+      if (!_mexeuNoMapa && distanciaKm(alvo, _manaus) > 1) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted && !_mexeuNoMapa) _mapa.move(alvo, 11);
+        });
+      }
+    }
+
     return Scaffold(
       body: Column(
         children: [
@@ -246,6 +262,9 @@ class _MapaScreenState extends State<MapaScreen>
                           child: FlutterMap(
                             mapController: _mapa,
                             options: MapOptions(
+                              onPositionChanged: (_, gesto) {
+                                if (gesto) _mexeuNoMapa = true;
+                              },
                               initialCenter: regiao?.centro ?? _manaus,
                               initialZoom: 11,
                               minZoom: 4,

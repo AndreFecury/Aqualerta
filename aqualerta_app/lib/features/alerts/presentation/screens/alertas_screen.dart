@@ -135,31 +135,36 @@ class _LinhaAlerta extends StatelessWidget {
     final quando = alerta.ativo
         ? 'Emitido ${formatarHaQuanto(alerta.emitidoEm)}'
         : 'Encerrado ${formatarHaQuanto(alerta.encerradoEm ?? alerta.emitidoEm)}';
-    return InkWell(
-      onTap: () => context.push('/alerts/${alerta.id}'),
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
-        decoration:
-            BoxDecoration(border: Border(bottom: BorderSide(color: c.linha))),
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  SeloSeveridade(
-                      severidade: alerta.severidade, mostrarAcao: alerta.ativo),
-                  const SizedBox(height: 6),
-                  Text(alerta.titulo, style: t.titleMedium),
-                  const SizedBox(height: 2),
-                  Text(alerta.regiaoNome, style: t.bodyMedium),
-                  const SizedBox(height: 2),
-                  Text(quando, style: t.bodySmall),
-                ],
+    return Semantics(
+      button: true,
+      hint: 'Abre os detalhes do alerta',
+      child: InkWell(
+        onTap: () => context.push('/alerts/${alerta.id}'),
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
+          decoration:
+              BoxDecoration(border: Border(bottom: BorderSide(color: c.linha))),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SeloSeveridade(
+                        severidade: alerta.severidade,
+                        mostrarAcao: alerta.ativo),
+                    const SizedBox(height: 6),
+                    Text(alerta.titulo, style: t.titleMedium),
+                    const SizedBox(height: 2),
+                    Text(alerta.regiaoNome, style: t.bodyMedium),
+                    const SizedBox(height: 2),
+                    Text(quando, style: t.bodySmall),
+                  ],
+                ),
               ),
-            ),
-            Icon(Icons.chevron_right, color: c.tinta2),
-          ],
+              Icon(Icons.chevron_right, color: c.tinta2),
+            ],
+          ),
         ),
       ),
     );

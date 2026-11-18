@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Abertura (Android 7 a 11): fundo azul-petróleo com a marca no centro.
+     No Android 12+ quem desenha é o sistema (values-v31/styles.xml). -->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- Fundo escuro azul-marinho -->
     <item android:drawable="@color/ic_launcher_background"/>
+    <item android:drawable="@drawable/ic_splash" android:gravity="center"
+        android:width="144dp" android:height="144dp"/>
 </layer-list>
