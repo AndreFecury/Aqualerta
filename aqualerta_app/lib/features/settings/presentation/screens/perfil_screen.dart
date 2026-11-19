@@ -158,6 +158,12 @@ class PerfilScreen extends StatelessWidget {
                     estado: 'Ativa',
                     cor: c.textoDe(Severidade.baixo)),
                 _LinhaFonte(
+                    nome: 'CEMADEN, chuva nos pluviômetros a cada 10 min',
+                    estado: estadoChuva(painel.chuvaColetadaEm),
+                    cor: estadoChuva(painel.chuvaColetadaEm) == 'Ativa'
+                        ? c.textoDe(Severidade.baixo)
+                        : c.tinta2),
+                _LinhaFonte(
                     nome: 'IBGE, limites dos municípios',
                     estado: 'Ativa',
                     cor: c.textoDe(Severidade.baixo)),
@@ -228,4 +234,12 @@ class _LinhaFonte extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Estado da coleta de chuva para a lista de fontes: "Ativa" com coleta nos
+/// últimos 30 min, "Atrasada" se parou, "Aguardando" se ainda não começou.
+String estadoChuva(DateTime? ultima, {DateTime? agora}) {
+  if (ultima == null) return 'Aguardando';
+  final idade = (agora ?? DateTime.now()).difference(ultima);
+  return idade <= const Duration(minutes: 30) ? 'Ativa' : 'Atrasada';
 }

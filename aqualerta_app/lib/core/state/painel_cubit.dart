@@ -18,6 +18,7 @@ class Painel extends Equatable {
     this.seguidas = const {},
     this.atualizadoEm,
     this.bancoSemViewsV3 = false,
+    this.chuvaColetadaEm,
   });
 
   final bool carregando;
@@ -31,6 +32,9 @@ class Painel extends Equatable {
   final Set<String> seguidas;
   final DateTime? atualizadoEm;
   final bool bancoSemViewsV3;
+
+  /// Última coleta dos pluviômetros do CEMADEN; `null` = ainda não há.
+  final DateTime? chuvaColetadaEm;
 
   bool get temDados => atualizadoEm != null;
 
@@ -160,6 +164,7 @@ class PainelCubit extends Cubit<Painel> {
         _dados.estacoes(),
         _dados.alertas(),
         _dados.regioesSeguidas(),
+        _dados.chuvaUltimaColeta(),
       ]);
       final regioes = resultados[0] as List<Regiao>;
       final estacoes = resultados[2] as List<Estacao>;
@@ -177,6 +182,7 @@ class PainelCubit extends Cubit<Painel> {
         seguidas: resultados[4] as Set<String>,
         atualizadoEm: DateTime.now(),
         bancoSemViewsV3: !_dados.viewsV3Disponiveis,
+        chuvaColetadaEm: resultados[5] as DateTime?,
       ));
     } catch (_) {
       emit(state.copyWith(

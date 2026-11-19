@@ -68,7 +68,11 @@ class _DetalheAlertaScreenState extends State<DetalheAlertaScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(estacao != null ? 'Alerta do ${estacao.titulo}' : 'Alerta'),
+        title: Text(alerta.ehChuva
+            ? 'Aviso de chuva'
+            : estacao != null
+                ? 'Alerta do ${estacao.titulo}'
+                : 'Alerta'),
         actions: [
           IconButton(
             tooltip: 'Compartilhar alerta',

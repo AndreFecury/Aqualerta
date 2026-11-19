@@ -124,6 +124,7 @@ class AlertaV3 extends Equatable {
     this.encerradoEm,
     this.eventoId,
     this.estacao,
+    this.origem,
   });
 
   final String id;
@@ -140,10 +141,19 @@ class AlertaV3 extends Equatable {
   /// Estação mais próxima da região, quando conhecida.
   final Estacao? estacao;
 
+  /// De onde veio o alerta (metadata.origem no banco): 'telemetria-ana'
+  /// para o nível do rio, 'chuva-cemaden' para os avisos de chuva forte.
+  final String? origem;
+
+  bool get ehChuva => origem == origemChuva;
+  static const origemChuva = 'chuva-cemaden';
+
   /// Pelas cotas da estação quando há leitura recente; senão, a do alerta.
   Severidade get severidade => estacao?.severidade() ?? severidadeOriginal;
 
-  AlertaV3 comEstacao(Estacao? e) => AlertaV3(
+  /// Liga a estação do rio ao alerta, para a severidade seguir as cotas.
+  /// Aviso de chuva não tem nada a ver com o nível do rio: fica como veio.
+  AlertaV3 comEstacao(Estacao? e) => ehChuva ? this : AlertaV3(
         id: id,
         regiaoId: regiaoId,
         regiaoNome: regiaoNome,
@@ -155,6 +165,7 @@ class AlertaV3 extends Equatable {
         encerradoEm: encerradoEm,
         eventoId: eventoId,
         estacao: e,
+        origem: origem,
       );
 
   @override

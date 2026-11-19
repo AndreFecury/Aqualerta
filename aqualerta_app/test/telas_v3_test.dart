@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:aqualerta/core/config/mapas.dart';
+import 'package:aqualerta/core/data/carta_datasource.dart';
 import 'package:aqualerta/core/state/painel_cubit.dart';
 import 'package:aqualerta/features/alerts/presentation/screens/alertas_screen.dart';
 import 'package:aqualerta/features/alerts/presentation/screens/detalhe_alerta_screen.dart';
@@ -22,10 +23,11 @@ Future<void> montar(WidgetTester t, Widget tela,
     {ThemeData? tema,
     double escala = 1,
     FonteSatelite? satelite,
-    Map<String, Object>? preferencias}) async {
+    Map<String, Object>? preferencias,
+    CartaDatasource? dados}) async {
   SharedPreferences.setMockInitialValues(preferencias ?? {});
   final prefs = await SharedPreferences.getInstance();
-  final painel = PainelCubit(CartaFalsa(), ouvirTempoReal: false);
+  final painel = PainelCubit(dados ?? CartaFalsa(), ouvirTempoReal: false);
   await t.binding.setSurfaceSize(const Size(390, 844));
   await t.pumpWidget(
     MultiBlocProvider(

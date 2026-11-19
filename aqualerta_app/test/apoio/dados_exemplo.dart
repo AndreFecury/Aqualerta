@@ -134,6 +134,10 @@ class CartaFalsa extends CartaDatasource {
   @override
   Future<Set<String>> regioesSeguidas() async => {compensa.id};
 
+  /// Sem coleta de chuva no banco de exemplo.
+  @override
+  Future<DateTime?> chuvaUltimaColeta() async => null;
+
   @override
   Future<void> seguir(String regiaoId, {required bool seguir}) async {}
 }

@@ -806,12 +806,22 @@ class _FolhaRegiao extends StatelessWidget {
 
   List<Widget> _conteudo(BuildContext context, AquaColors c, TextTheme t) {
     final severidade = painel.severidadeDaRegiao(regiao!.id);
-    final alerta =
-        painel.ativos.where((a) => a.regiaoId == regiao!.id).firstOrNull;
+    final daRegiao = painel.ativos.where((a) => a.regiaoId == regiao!.id);
+    final chuva = daRegiao.where((a) => a.ehChuva).firstOrNull;
+    // Aviso de chuva tem prioridade: é o que muda nos próximos minutos.
+    final alerta = chuva ?? daRegiao.firstOrNull;
     final recente = estacao?.leituraRecente() ?? false;
 
     String frase;
-    if (recente && estacao!.cotas != null) {
+    if (chuva != null) {
+      frase = switch (chuva.severidade) {
+        Severidade.critico =>
+          'chuva extrema nos pluviômetros, risco de grandes alagamentos.',
+        Severidade.alto =>
+          'chuva muito forte nos pluviômetros, alagamentos prováveis.',
+        _ => 'chuva forte nos pluviômetros, risco de alagamento.',
+      };
+    } else if (recente && estacao!.cotas != null) {
       final dif = estacao!.nivel! - estacao!.cotas!.alerta;
       frase = dif >= 0
           ? 'O ${estacao!.titulo} está ${formatarDiferenca(dif)} acima da cota de alerta.'

@@ -143,7 +143,7 @@ class CartaDatasource {
     final linhas = await _c
         .from('alerts')
         .select(
-            'id, region_id, title, body, severity, status, issued_at, resolved_at, flood_event_id, '
+            'id, region_id, title, body, severity, status, issued_at, resolved_at, flood_event_id, metadata, '
             'monitored_regions!inner(name, state_code)')
         .or('status.eq.ACTIVE,issued_at.gte.$desde')
         .order('issued_at', ascending: false)
@@ -164,8 +164,24 @@ class CartaDatasource {
               ? DateTime.parse(r['resolved_at'] as String)
               : null,
           eventoId: r['flood_event_id'] as String?,
+          origem: (r['metadata'] as Map?)?['origem'] as String?,
         ),
     ];
+  }
+
+  /// Última coleta bem-sucedida dos pluviômetros do CEMADEN (tabela
+  /// chuva_estado). `null` se a coleta ainda não existe no banco ou falhou.
+  Future<DateTime?> chuvaUltimaColeta() async {
+    try {
+      final r = await _c
+          .from('chuva_estado')
+          .select('ultima_coleta_ok')
+          .maybeSingle();
+      final v = r?['ultima_coleta_ok'] as String?;
+      return v == null ? null : DateTime.parse(v);
+    } catch (_) {
+      return null;
+    }
   }
 
   /// Regiões que o usuário segue (ids).
