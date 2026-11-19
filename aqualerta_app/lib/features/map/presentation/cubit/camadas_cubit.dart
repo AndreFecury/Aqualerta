@@ -1,6 +1,8 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:aqualerta/core/domain/satelite.dart';
+import 'package:aqualerta/features/map/data/satelite_repository.dart';
 
 enum TipoMapa {
   automatico('Automático'),
@@ -17,6 +19,9 @@ enum TipoMapa {
 enum Camada {
   areasAlagadas(
       'Áreas alagadas', 'Eventos registrados, com a área real quando houver'),
+  // Desligada por padrão (fora do conjunto padrão de ExibicaoMapa).
+  aguaSatelite('Água detectada por satélite',
+      'Radar Sentinel-1 (Copernicus). Não vê água sob a floresta'),
   regioes('Regiões monitoradas', 'Bairros e cidades com o nível de risco'),
   estacoes('Estações dos rios', 'Nível do rio na última leitura da ANA'),
   minhaLocalizacao('Minha localização', 'Mostra onde você está no mapa');
@@ -79,5 +84,64 @@ class CamadasCubit extends Cubit<ExibicaoMapa> {
     novas.contains(camada) ? novas.remove(camada) : novas.add(camada);
     emit(ExibicaoMapa(tipo: state.tipo, camadas: novas));
     await _prefs.setStringList(_kCamadas, [for (final c in novas) c.name]);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Água detectada por satélite
+// ---------------------------------------------------------------------------
+
+enum SituacaoSatelite { carregando, pronto, erro }
+
+class DadoSatelite extends Equatable {
+  const DadoSatelite(this.situacao, {this.observacao, this.buscadoEm});
+  final SituacaoSatelite situacao;
+
+  /// `null` com [SituacaoSatelite.pronto] = região sem observação ainda.
+  final ObservacaoSatelite? observacao;
+  final DateTime? buscadoEm;
+
+  @override
+  List<Object?> get props => [situacao, observacao, buscadoEm];
+}
+
+/// Última observação de satélite por região, guardada em memória. Não busca
+/// de novo a mesma região antes de [validadeCache] (o satélite passa a cada
+/// 6–12 dias; o banco é verificado a cada 6 h).
+class SateliteCubit extends Cubit<Map<String, DadoSatelite>> {
+  SateliteCubit(this._fonte, {DateTime Function()? relogio})
+      : _agora = relogio ?? DateTime.now,
+        super(const {});
+
+  final FonteSatelite _fonte;
+  final DateTime Function() _agora;
+  static const validadeCache = Duration(minutes: 30);
+
+  DadoSatelite? de(String regionId) => state[regionId];
+
+  /// Busca a região se não estiver em memória (ou se [forcar], no "Tentar
+  /// de novo"). Uma busca por vez por região; erro não repete sozinho.
+  Future<void> carregar(String regionId, {bool forcar = false}) async {
+    final atual = state[regionId];
+    if (atual?.situacao == SituacaoSatelite.carregando) return;
+    if (!forcar &&
+        atual?.situacao == SituacaoSatelite.pronto &&
+        _agora().difference(atual!.buscadoEm!) < validadeCache) {
+      return;
+    }
+    if (!forcar && atual?.situacao == SituacaoSatelite.erro) return;
+    _por(regionId, const DadoSatelite(SituacaoSatelite.carregando));
+    try {
+      final obs = await _fonte.ultima(regionId);
+      _por(regionId,
+          DadoSatelite(SituacaoSatelite.pronto, observacao: obs, buscadoEm: _agora()));
+    } catch (_) {
+      _por(regionId, DadoSatelite(SituacaoSatelite.erro, buscadoEm: _agora()));
+    }
+  }
+
+  void _por(String id, DadoSatelite d) {
+    if (isClosed) return;
+    emit({...state, id: d});
   }
 }

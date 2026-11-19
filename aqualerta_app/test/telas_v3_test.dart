@@ -13,12 +13,17 @@ import 'package:aqualerta/features/settings/presentation/cubit/aparencia_cubit.d
 import 'package:aqualerta/features/settings/presentation/cubit/notificacoes_cubit.dart';
 import 'package:aqualerta/features/settings/presentation/screens/perfil_screen.dart';
 import 'package:aqualerta/shared/theme/aqua_theme.dart';
+import 'package:aqualerta/core/domain/satelite.dart';
+import 'package:aqualerta/features/map/data/satelite_repository.dart';
 import 'apoio/dados_exemplo.dart';
 
 /// Monta [tela] num celular de 390 × 844 com os dados de exemplo.
 Future<void> montar(WidgetTester t, Widget tela,
-    {ThemeData? tema, double escala = 1}) async {
-  SharedPreferences.setMockInitialValues({});
+    {ThemeData? tema,
+    double escala = 1,
+    FonteSatelite? satelite,
+    Map<String, Object>? preferencias}) async {
+  SharedPreferences.setMockInitialValues(preferencias ?? {});
   final prefs = await SharedPreferences.getInstance();
   final painel = PainelCubit(CartaFalsa(), ouvirTempoReal: false);
   await t.binding.setSurfaceSize(const Size(390, 844));
@@ -29,6 +34,8 @@ Future<void> montar(WidgetTester t, Widget tela,
         BlocProvider(create: (_) => AparenciaCubit(prefs)),
         BlocProvider(create: (_) => NotificacoesCubit(prefs)),
         BlocProvider(create: (_) => CamadasCubit(prefs)),
+        BlocProvider(
+            create: (_) => SateliteCubit(satelite ?? SateliteVazio())),
       ],
       child: MaterialApp(
         theme: tema ?? AquaTheme.claro,
@@ -43,6 +50,16 @@ Future<void> montar(WidgetTester t, Widget tela,
   );
   await t.pump(const Duration(milliseconds: 100));
   await t.pump(const Duration(milliseconds: 100));
+}
+
+/// Banco sem nenhuma observação de satélite.
+class SateliteVazio implements FonteSatelite {
+  int chamadas = 0;
+  @override
+  Future<ObservacaoSatelite?> ultima(String regionId) async {
+    chamadas++;
+    return null;
+  }
 }
 
 void main() {

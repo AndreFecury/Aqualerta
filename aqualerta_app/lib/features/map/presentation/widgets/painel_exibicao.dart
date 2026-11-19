@@ -29,6 +29,8 @@ class _PainelExibicao extends StatelessWidget {
     Widget icone(Camada camada) => switch (camada) {
           Camada.areasAlagadas =>
             const AmostraHachura(severidade: Severidade.alto, tamanho: 24),
+          Camada.aguaSatelite =>
+            Icon(Icons.satellite_alt_outlined, color: c.tinta),
           Camada.regioes =>
             const AmostraHachura(severidade: Severidade.baixo, tamanho: 24),
           Camada.estacoes => Icon(Icons.water_drop_outlined, color: c.tinta),
@@ -77,18 +79,6 @@ class _PainelExibicao extends StatelessWidget {
                   value: estado.mostra(camada),
                   onChanged: (_) => cubit.alternar(camada),
                 ),
-              ListTile(
-                enabled: false,
-                contentPadding: EdgeInsets.zero,
-                leading: SizedBox(
-                    width: 28,
-                    child: Icon(Icons.satellite_alt_outlined, color: c.tinta2)),
-                title: Text('Inundação por satélite',
-                    style: t.titleSmall!.copyWith(color: c.tinta2)),
-                subtitle: Text('Imagens Sentinel-1 do Copernicus',
-                    style: t.bodySmall),
-                trailing: Text('Em breve', style: t.labelSmall),
-              ),
             ],
           ),
         ),

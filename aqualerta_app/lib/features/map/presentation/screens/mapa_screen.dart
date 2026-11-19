@@ -9,6 +9,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:aqualerta/core/config/mapas.dart';
 import 'package:aqualerta/shared/widgets/logo_maptiler.dart';
 import 'package:aqualerta/core/domain/carta.dart';
+import 'package:aqualerta/core/domain/satelite.dart';
 import 'package:aqualerta/core/domain/severidade.dart';
 import 'package:aqualerta/core/state/painel_cubit.dart';
 import 'package:aqualerta/core/utils/formato.dart';
@@ -25,6 +26,11 @@ const _manaus = LatLng(-3.119, -60.021);
 
 /// Parte da altura que o cartão ocupa fechado; o mapa deixa essa faixa livre.
 const _alturaMinima = 0.2;
+
+/// Água detectada por satélite: azul forte translúcido, distinto das cores de
+/// risco e visível tanto sobre a foto de satélite quanto sobre o mapa de ruas.
+const _aguaSateliteFundo = Color(0x732F80ED);
+const _aguaSateliteBorda = Color(0xFF1A56DB);
 
 class MapaScreen extends StatefulWidget {
   const MapaScreen({super.key});
@@ -227,6 +233,26 @@ class _MapaScreenState extends State<MapaScreen>
         painel.regiaoPrincipal;
     final estacao = painel.estacaoDaRegiao(regiao);
 
+    // Água por satélite: busca a região mostrada quando a camada está ligada.
+    // O SateliteCubit guarda em memória e não repete em 30 min.
+    final satelite = context.watch<SateliteCubit>();
+    final mostraSatelite = exibicao.mostra(Camada.aguaSatelite);
+    final dadoSatelite = regiao == null ? null : satelite.de(regiao.id);
+    if (mostraSatelite && regiao != null) {
+      final vencido = dadoSatelite?.situacao == SituacaoSatelite.pronto &&
+          DateTime.now().difference(dadoSatelite!.buscadoEm!) >
+              SateliteCubit.validadeCache;
+      if (dadoSatelite == null || vencido) {
+        final id = regiao.id;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) satelite.carregar(id);
+        });
+      }
+    }
+    final areasSatelite = mostraSatelite
+        ? dadoSatelite?.observacao?.areas ?? const <AreaAgua>[]
+        : const <AreaAgua>[];
+
     // Os dados chegam depois do primeiro desenho do mapa (que abre em
     // Manaus). Uma vez só, leva a câmera até a região principal, se a
     // pessoa ainda não mexeu no mapa.
@@ -315,6 +341,20 @@ class _MapaScreenState extends State<MapaScreen>
                                   tileUpdateTransformer:
                                       TileUpdateTransformers.throttle(
                                           const Duration(milliseconds: 250)),
+                                ),
+                              if (areasSatelite.isNotEmpty)
+                                PolygonLayer(
+                                  key: const ValueKey('camada-satelite'),
+                                  polygons: [
+                                    for (final a in areasSatelite)
+                                      Polygon(
+                                        points: a.contorno,
+                                        holePointsList: a.buracos,
+                                        color: _aguaSateliteFundo,
+                                        borderColor: _aguaSateliteBorda,
+                                        borderStrokeWidth: 1.2,
+                                      ),
+                                  ],
                                 ),
                               if (exibicao.mostra(Camada.areasAlagadas))
                                 PolygonLayer(polygons: [
@@ -522,6 +562,13 @@ class _MapaScreenState extends State<MapaScreen>
                                 ),
                               ),
                             ),
+                          ),
+                        if (mostraSatelite)
+                          Positioned(
+                            left: 12,
+                            top: MediaQuery.paddingOf(context).top + 76,
+                            child: _LegendaSatelite(
+                                dado: dadoSatelite, temRegiao: regiao != null),
                           ),
                         // Botões do mapa
                         Positioned(
@@ -879,6 +926,246 @@ class _FolhaRegiao extends StatelessWidget {
             child: const Text('Seguir região'),
           ),
         ),
+      const SizedBox(height: 20),
+      _BlocoSatelite(regiaoId: regiao!.id),
     ];
   }
 }
+
+// ---------------------------------------------------------------------------
+// Água detectada por satélite (informação complementar ao alerta)
+// ---------------------------------------------------------------------------
+
+const _textoLimitacoes =
+    'O radar só enxerga água aberta: rios, lagos e áreas alagadas sem mata. '
+    'Várzea e igapó alagados debaixo da floresta não aparecem, então isto não '
+    'é o tamanho total da cheia. Vento forte na hora da passagem também pode '
+    'esconder água. O nível de alerta continua vindo só das cotas oficiais '
+    'da ANA/SGB.';
+
+/// "03/11/2026, 05:38": hora de Manaus (UTC−4, sem horário de verão).
+String formatarHoraManaus(DateTime quando) {
+  final m = quando.toUtc().subtract(const Duration(hours: 4));
+  String dois(int n) => n.toString().padLeft(2, '0');
+  return '${dois(m.day)}/${dois(m.month)}/${m.year}, '
+      '${dois(m.hour)}:${dois(m.minute)}';
+}
+
+/// Área no padrão brasileiro: 1036.3 → "1.036"; 57.4 → "57,4"; 0.13 → "0,13".
+String formatarKm2(double v) {
+  if (v >= 100) {
+    final s = v.round().toString();
+    final b = StringBuffer();
+    for (var i = 0; i < s.length; i++) {
+      if (i > 0 && (s.length - i) % 3 == 0) b.write('.');
+      b.write(s[i]);
+    }
+    return b.toString();
+  }
+  return v.toStringAsFixed(v >= 10 ? 1 : 2).replaceAll('.', ',');
+}
+
+class _BlocoSatelite extends StatelessWidget {
+  const _BlocoSatelite({required this.regiaoId});
+  final String regiaoId;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = AquaColors.of(context);
+    final t = Theme.of(context).textTheme;
+    final ligada =
+        context.watch<CamadasCubit>().state.mostra(Camada.aguaSatelite);
+
+    if (!ligada) {
+      return Align(
+        alignment: Alignment.centerLeft,
+        child: TextButton.icon(
+          onPressed: () =>
+              context.read<CamadasCubit>().alternar(Camada.aguaSatelite),
+          icon: const Icon(Icons.satellite_alt_outlined),
+          label: const Text('Mostrar água detectada por satélite'),
+        ),
+      );
+    }
+
+    final dado = context.watch<SateliteCubit>().de(regiaoId);
+    final obs = dado?.observacao;
+    final titulo = Row(
+      children: [
+        Icon(Icons.satellite_alt_outlined, size: 20, color: c.tinta2),
+        const SizedBox(width: 8),
+        Expanded(
+            child: Semantics(
+                header: true, child: Text('Satélite', style: t.titleSmall))),
+        if (obs != null && obs.desatualizada())
+          Semantics(
+            label: 'Observação desatualizada, com mais de 14 dias',
+            excludeSemantics: true,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(
+                border: Border.all(color: c.barro),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text('desatualizado',
+                  style: t.labelSmall!.copyWith(color: c.barro)),
+            ),
+          ),
+      ],
+    );
+
+    final List<Widget> corpo;
+    switch (dado?.situacao) {
+      case null:
+      case SituacaoSatelite.carregando:
+        corpo = [
+          Text('Carregando a última passagem do satélite…',
+              style: t.bodySmall)
+        ];
+      case SituacaoSatelite.erro:
+        corpo = [
+          Text('Não foi possível carregar a observação de satélite.',
+              style: t.bodyMedium),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton(
+              onPressed: () => context
+                  .read<SateliteCubit>()
+                  .carregar(regiaoId, forcar: true),
+              child: const Text('Tentar de novo'),
+            ),
+          ),
+        ];
+      case SituacaoSatelite.pronto when obs == null:
+        corpo = [
+          Text('Sem observação de satélite disponível para esta região ainda.',
+              style: t.bodyMedium),
+        ];
+      case SituacaoSatelite.pronto:
+        final o = obs!;
+        final inundada = o.areaInundadaKm2;
+        corpo = [
+          Row(
+            children: [
+              const _AmostraSatelite(),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text('Água aberta detectada por radar (Sentinel-1)',
+                    style: t.bodyMedium),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+              'Passagem de ${formatarHoraManaus(o.observadoEm)} '
+              '(hora de Manaus) · ${formatarHaQuanto(o.observadoEm)}',
+              style: t.bodySmall),
+          const SizedBox(height: 6),
+          Text(
+              '${formatarKm2(o.areaAguaKm2)} km² de água num quadrado de '
+              '50 × 50 km em volta da estação.',
+              style: t.bodyMedium),
+          if (inundada != null && inundada >= 0.01)
+            Text(
+                '${formatarKm2(inundada)} km² fora do leito habitual '
+                '(inundação, segundo o GFM).',
+                style: t.bodySmall),
+          if (o.excluidaPct != null && o.excluidaPct! >= 1)
+            Text(
+                'O radar não consegue avaliar ${o.excluidaPct!.round()}% '
+                'dessa área (floresta densa, cidade, relevo).',
+                style: t.bodySmall),
+          const SizedBox(height: 6),
+          Text(
+              'Fonte: ${o.atribuicao ?? 'Copernicus Emergency Management Service — Global Flood Monitoring'}.',
+              style: t.bodySmall),
+        ];
+    }
+
+    return Semantics(
+      container: true,
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          border: Border.all(color: c.linha),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            titulo,
+            const SizedBox(height: 8),
+            ...corpo,
+            const SizedBox(height: 10),
+            Text('Limitações', style: t.labelLarge),
+            const SizedBox(height: 2),
+            Text(_textoLimitacoes, style: t.bodySmall),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AmostraSatelite extends StatelessWidget {
+  const _AmostraSatelite();
+
+  @override
+  Widget build(BuildContext context) => Container(
+        width: 16,
+        height: 16,
+        decoration: BoxDecoration(
+          color: _aguaSateliteFundo,
+          border: Border.all(color: _aguaSateliteBorda, width: 1.2),
+          borderRadius: BorderRadius.circular(3),
+        ),
+      );
+}
+
+/// Legenda pequena no canto do mapa quando a camada de satélite está ligada.
+class _LegendaSatelite extends StatelessWidget {
+  const _LegendaSatelite({required this.dado, required this.temRegiao});
+  final DadoSatelite? dado;
+  final bool temRegiao;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = AquaColors.of(context);
+    final t = Theme.of(context).textTheme;
+    final obs = dado?.observacao;
+    final detalhe = switch (dado?.situacao) {
+      SituacaoSatelite.pronto when obs != null =>
+        formatarHaQuanto(obs.observadoEm),
+      SituacaoSatelite.pronto => 'sem dado nesta região',
+      SituacaoSatelite.erro => 'não carregou',
+      _ => temRegiao ? 'carregando…' : 'escolha uma região',
+    };
+    return Semantics(
+      label:
+          'Legenda: área azul é água aberta detectada por satélite, $detalhe',
+      excludeSemantics: true,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        constraints: const BoxConstraints(maxWidth: 220),
+        decoration: BoxDecoration(
+          color: c.papel.withValues(alpha: 0.94),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: c.linha),
+          boxShadow: [BoxShadow(color: c.sombra, blurRadius: 8)],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const _AmostraSatelite(),
+            const SizedBox(width: 8),
+            Flexible(
+              child: Text('Água por satélite · $detalhe',
+                  style: t.labelSmall, overflow: TextOverflow.ellipsis),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+

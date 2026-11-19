@@ -6,6 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:aqualerta/shared/theme/aqua_theme.dart';
 import 'package:aqualerta/features/settings/presentation/cubit/aparencia_cubit.dart';
 import 'package:aqualerta/features/settings/presentation/cubit/notificacoes_cubit.dart';
+import 'package:aqualerta/features/map/data/satelite_repository.dart';
 import 'package:aqualerta/features/map/presentation/cubit/camadas_cubit.dart';
 import 'router.dart';
 
@@ -45,6 +46,7 @@ class _AqualertaAppState extends State<AqualertaApp> {
             create: (_) => NotificacoesCubit(widget.preferencias,
                 cliente: Supabase.instance.client)),
         BlocProvider(create: (_) => CamadasCubit(widget.preferencias)),
+        BlocProvider(create: (_) => SateliteCubit(SateliteRepository())),
       ],
       child: BlocBuilder<AparenciaCubit, Aparencia>(
         builder: (context, aparencia) => MaterialApp.router(
