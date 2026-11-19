@@ -8,9 +8,13 @@ DO $$ BEGIN
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 CREATE SCHEMA IF NOT EXISTS net;
-CREATE TABLE IF NOT EXISTS net.chamadas (url text, body jsonb);
+CREATE TABLE IF NOT EXISTS net.chamadas (url text, body jsonb, params jsonb, headers jsonb);
+CREATE SEQUENCE IF NOT EXISTS net.pedido_seq;
 CREATE OR REPLACE FUNCTION net.http_post(url text, body jsonb, params jsonb DEFAULT '{}', headers jsonb DEFAULT '{}', timeout_milliseconds int DEFAULT 5000)
-RETURNS bigint LANGUAGE sql AS $$ INSERT INTO net.chamadas VALUES (url, body); SELECT 1::bigint $$;
+RETURNS bigint LANGUAGE sql AS $$ INSERT INTO net.chamadas VALUES (url, body, params, headers); SELECT nextval('net.pedido_seq') $$;
+-- Vault do Supabase: só a view que as migrações leem.
+CREATE SCHEMA IF NOT EXISTS vault;
+CREATE TABLE IF NOT EXISTS vault.decrypted_secrets (name text PRIMARY KEY, decrypted_secret text);
 CREATE SCHEMA IF NOT EXISTS cron;
 CREATE TABLE IF NOT EXISTS cron.job (jobname text PRIMARY KEY, schedule text, command text);
 CREATE OR REPLACE FUNCTION cron.schedule(n text, s text, c text) RETURNS bigint LANGUAGE sql AS
@@ -60,8 +64,7 @@ GRANT SELECT ON ALL TABLES IN SCHEMA public TO anon, authenticated, service_role
 CREATE TABLE IF NOT EXISTS net._http_response (
   id bigint PRIMARY KEY, status_code integer, content_type text, headers jsonb,
   content text, timed_out boolean, error_msg text, created timestamptz NOT NULL DEFAULT now());
-CREATE SEQUENCE IF NOT EXISTS net.pedido_seq;
 CREATE OR REPLACE FUNCTION net.http_get(url text, params jsonb DEFAULT '{}', headers jsonb DEFAULT '{}', timeout_milliseconds int DEFAULT 5000)
-RETURNS bigint LANGUAGE sql AS $$ INSERT INTO net.chamadas VALUES (url, NULL); SELECT nextval('net.pedido_seq') $$;
+RETURNS bigint LANGUAGE sql AS $$ INSERT INTO net.chamadas VALUES (url, NULL, params, headers); SELECT nextval('net.pedido_seq') $$;
 CREATE OR REPLACE FUNCTION cron.unschedule(n text) RETURNS boolean LANGUAGE sql AS
 $$ DELETE FROM cron.job WHERE jobname = n RETURNING true $$;
