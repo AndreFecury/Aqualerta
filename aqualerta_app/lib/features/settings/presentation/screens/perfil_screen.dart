@@ -162,9 +162,9 @@ class PerfilScreen extends StatelessWidget {
                     estado: 'Ativa',
                     cor: c.textoDe(Severidade.baixo)),
                 _LinhaFonte(
-                    nome: 'Copernicus, satélite',
-                    estado: 'Em breve',
-                    cor: c.tinta2),
+                    nome: 'Copernicus, água por satélite (Sentinel-1)',
+                    estado: 'Ativa',
+                    cor: c.textoDe(Severidade.baixo)),
                 const SizedBox(height: 28),
                 OutlinedButton(
                   style: OutlinedButton.styleFrom(
