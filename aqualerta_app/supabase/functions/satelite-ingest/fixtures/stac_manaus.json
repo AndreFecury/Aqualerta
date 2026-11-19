@@ -1,0 +1,501 @@
+{
+ "type": "FeatureCollection",
+ "_nota": "Resposta real de https://stac.eodc.eu/api/v1/search (collections=GFM, bbox de Manaus), baixada em 18/11/2026 e cortada: 3 passagens, só os campos usados.",
+ "features": [
+  {
+   "type": "Feature",
+   "id": "ENSEMBLE_FLOOD_20261110T093114_VV_SA020M_E072N066T3",
+   "bbox": [
+    -61.01335412266625,
+    -4.886382309948178,
+    -58.31998533742473,
+    -2.166556240781173
+   ],
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       -61.01335412266625,
+       -4.886382309948178
+      ],
+      [
+       -61.010398672502504,
+       -2.1734202501558726
+      ],
+      [
+       -58.332527922188284,
+       -2.166556240781173
+      ],
+      [
+       -58.31998533742473,
+       -4.878870743862338
+      ],
+      [
+       -61.01335412266625,
+       -4.886382309948178
+      ]
+     ]
+    ]
+   },
+   "properties": {
+    "datetime": "2026-11-10T09:31:14Z",
+    "Equi7Tile": "SA020M_E072N066T3"
+   },
+   "assets": {
+    "ensemble_water_extent": {
+     "href": "https://data.eodc.eu/collections/GFM_LAYERS/obswater_mask/SA020M/2026/11/10/ENSEMBLE_OBSWATER_20261110T093114_VV_SA020M_E072N066T3.tif",
+     "type": "image/tiff; application=geotiff; profile=cloud-optimized"
+    },
+    "ensemble_flood_extent": {
+     "href": "https://data.eodc.eu/collections/GFM_LAYERS/flood_extent/SA020M/2026/11/10/ENSEMBLE_FLOOD_20261110T093114_VV_SA020M_E072N066T3.tif",
+     "type": "image/tiff; application=geotiff; profile=cloud-optimized"
+    },
+    "exclusion_mask": {
+     "href": "https://data.eodc.eu/collections/GFM_LAYERS/exlusion_mask/SA020M/2026/11/10/ENSEMBLE_EXCLAYER_20261110T093114_VV_SA020M_E072N066T3.tif",
+     "type": "image/tiff; application=geotiff; profile=cloud-optimized"
+    }
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "ENSEMBLE_FLOOD_20261110T093049_VV_SA020M_E072N066T3",
+   "bbox": [
+    -61.01335412266625,
+    -4.886382309948178,
+    -58.31998533742473,
+    -2.166556240781173
+   ],
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       -61.01335412266625,
+       -4.886382309948178
+      ],
+      [
+       -61.010398672502504,
+       -2.1734202501558726
+      ],
+      [
+       -58.332527922188284,
+       -2.166556240781173
+      ],
+      [
+       -58.31998533742473,
+       -4.878870743862338
+      ],
+      [
+       -61.01335412266625,
+       -4.886382309948178
+      ]
+     ]
+    ]
+   },
+   "properties": {
+    "datetime": "2026-11-10T09:30:49Z",
+    "Equi7Tile": "SA020M_E072N066T3"
+   },
+   "assets": {
+    "ensemble_water_extent": {
+     "href": "https://data.eodc.eu/collections/GFM_LAYERS/obswater_mask/SA020M/2026/11/10/ENSEMBLE_OBSWATER_20261110T093049_VV_SA020M_E072N066T3.tif",
+     "type": "image/tiff; application=geotiff; profile=cloud-optimized"
+    },
+    "ensemble_flood_extent": {
+     "href": "https://data.eodc.eu/collections/GFM_LAYERS/flood_extent/SA020M/2026/11/10/ENSEMBLE_FLOOD_20261110T093049_VV_SA020M_E072N066T3.tif",
+     "type": "image/tiff; application=geotiff; profile=cloud-optimized"
+    },
+    "exclusion_mask": {
+     "href": "https://data.eodc.eu/collections/GFM_LAYERS/exlusion_mask/SA020M/2026/11/10/ENSEMBLE_EXCLAYER_20261110T093049_VV_SA020M_E072N066T3.tif",
+     "type": "image/tiff; application=geotiff; profile=cloud-optimized"
+    }
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "ENSEMBLE_FLOOD_20261110T093024_VV_SA020M_E072N066T3",
+   "bbox": [
+    -61.01335412266625,
+    -4.886382309948178,
+    -58.31998533742473,
+    -2.166556240781173
+   ],
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       -61.01335412266625,
+       -4.886382309948178
+      ],
+      [
+       -61.010398672502504,
+       -2.1734202501558726
+      ],
+      [
+       -58.332527922188284,
+       -2.166556240781173
+      ],
+      [
+       -58.31998533742473,
+       -4.878870743862338
+      ],
+      [
+       -61.01335412266625,
+       -4.886382309948178
+      ]
+     ]
+    ]
+   },
+   "properties": {
+    "datetime": "2026-11-10T09:30:24Z",
+    "Equi7Tile": "SA020M_E072N066T3"
+   },
+   "assets": {
+    "ensemble_water_extent": {
+     "href": "https://data.eodc.eu/collections/GFM_LAYERS/obswater_mask/SA020M/2026/11/10/ENSEMBLE_OBSWATER_20261110T093024_VV_SA020M_E072N066T3.tif",
+     "type": "image/tiff; application=geotiff; profile=cloud-optimized"
+    },
+    "ensemble_flood_extent": {
+     "href": "https://data.eodc.eu/collections/GFM_LAYERS/flood_extent/SA020M/2026/11/10/ENSEMBLE_FLOOD_20261110T093024_VV_SA020M_E072N066T3.tif",
+     "type": "image/tiff; application=geotiff; profile=cloud-optimized"
+    },
+    "exclusion_mask": {
+     "href": "https://data.eodc.eu/collections/GFM_LAYERS/exlusion_mask/SA020M/2026/11/10/ENSEMBLE_EXCLAYER_20261110T093024_VV_SA020M_E072N066T3.tif",
+     "type": "image/tiff; application=geotiff; profile=cloud-optimized"
+    }
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "ENSEMBLE_FLOOD_20261108T094722_VV_SA020M_E072N066T3",
+   "bbox": [
+    -61.01335412266625,
+    -4.886382309948178,
+    -58.31998533742473,
+    -2.166556240781173
+   ],
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       -61.01335412266625,
+       -4.886382309948178
+      ],
+      [
+       -61.010398672502504,
+       -2.1734202501558726
+      ],
+      [
+       -58.332527922188284,
+       -2.166556240781173
+      ],
+      [
+       -58.31998533742473,
+       -4.878870743862338
+      ],
+      [
+       -61.01335412266625,
+       -4.886382309948178
+      ]
+     ]
+    ]
+   },
+   "properties": {
+    "datetime": "2026-11-08T09:47:22Z",
+    "Equi7Tile": "SA020M_E072N066T3"
+   },
+   "assets": {
+    "ensemble_water_extent": {
+     "href": "https://data.eodc.eu/collections/GFM_LAYERS/obswater_mask/SA020M/2026/11/08/ENSEMBLE_OBSWATER_20261108T094722_VV_SA020M_E072N066T3.tif",
+     "type": "image/tiff; application=geotiff; profile=cloud-optimized"
+    },
+    "ensemble_flood_extent": {
+     "href": "https://data.eodc.eu/collections/GFM_LAYERS/flood_extent/SA020M/2026/11/08/ENSEMBLE_FLOOD_20261108T094722_VV_SA020M_E072N066T3.tif",
+     "type": "image/tiff; application=geotiff; profile=cloud-optimized"
+    },
+    "exclusion_mask": {
+     "href": "https://data.eodc.eu/collections/GFM_LAYERS/exlusion_mask/SA020M/2026/11/08/ENSEMBLE_EXCLAYER_20261108T094722_VV_SA020M_E072N066T3.tif",
+     "type": "image/tiff; application=geotiff; profile=cloud-optimized"
+    }
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "ENSEMBLE_FLOOD_20261108T094657_VV_SA020M_E072N066T3",
+   "bbox": [
+    -61.01335412266625,
+    -4.886382309948178,
+    -58.31998533742473,
+    -2.166556240781173
+   ],
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       -61.01335412266625,
+       -4.886382309948178
+      ],
+      [
+       -61.010398672502504,
+       -2.1734202501558726
+      ],
+      [
+       -58.332527922188284,
+       -2.166556240781173
+      ],
+      [
+       -58.31998533742473,
+       -4.878870743862338
+      ],
+      [
+       -61.01335412266625,
+       -4.886382309948178
+      ]
+     ]
+    ]
+   },
+   "properties": {
+    "datetime": "2026-11-08T09:46:57Z",
+    "Equi7Tile": "SA020M_E072N066T3"
+   },
+   "assets": {
+    "ensemble_water_extent": {
+     "href": "https://data.eodc.eu/collections/GFM_LAYERS/obswater_mask/SA020M/2026/11/08/ENSEMBLE_OBSWATER_20261108T094657_VV_SA020M_E072N066T3.tif",
+     "type": "image/tiff; application=geotiff; profile=cloud-optimized"
+    },
+    "ensemble_flood_extent": {
+     "href": "https://data.eodc.eu/collections/GFM_LAYERS/flood_extent/SA020M/2026/11/08/ENSEMBLE_FLOOD_20261108T094657_VV_SA020M_E072N066T3.tif",
+     "type": "image/tiff; application=geotiff; profile=cloud-optimized"
+    },
+    "exclusion_mask": {
+     "href": "https://data.eodc.eu/collections/GFM_LAYERS/exlusion_mask/SA020M/2026/11/08/ENSEMBLE_EXCLAYER_20261108T094657_VV_SA020M_E072N066T3.tif",
+     "type": "image/tiff; application=geotiff; profile=cloud-optimized"
+    }
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "ENSEMBLE_FLOOD_20261108T094632_VV_SA020M_E072N066T3",
+   "bbox": [
+    -61.01335412266625,
+    -4.886382309948178,
+    -58.31998533742473,
+    -2.166556240781173
+   ],
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       -61.01335412266625,
+       -4.886382309948178
+      ],
+      [
+       -61.010398672502504,
+       -2.1734202501558726
+      ],
+      [
+       -58.332527922188284,
+       -2.166556240781173
+      ],
+      [
+       -58.31998533742473,
+       -4.878870743862338
+      ],
+      [
+       -61.01335412266625,
+       -4.886382309948178
+      ]
+     ]
+    ]
+   },
+   "properties": {
+    "datetime": "2026-11-08T09:46:32Z",
+    "Equi7Tile": "SA020M_E072N066T3"
+   },
+   "assets": {
+    "ensemble_water_extent": {
+     "href": "https://data.eodc.eu/collections/GFM_LAYERS/obswater_mask/SA020M/2026/11/08/ENSEMBLE_OBSWATER_20261108T094632_VV_SA020M_E072N066T3.tif",
+     "type": "image/tiff; application=geotiff; profile=cloud-optimized"
+    },
+    "ensemble_flood_extent": {
+     "href": "https://data.eodc.eu/collections/GFM_LAYERS/flood_extent/SA020M/2026/11/08/ENSEMBLE_FLOOD_20261108T094632_VV_SA020M_E072N066T3.tif",
+     "type": "image/tiff; application=geotiff; profile=cloud-optimized"
+    },
+    "exclusion_mask": {
+     "href": "https://data.eodc.eu/collections/GFM_LAYERS/exlusion_mask/SA020M/2026/11/08/ENSEMBLE_EXCLAYER_20261108T094632_VV_SA020M_E072N066T3.tif",
+     "type": "image/tiff; application=geotiff; profile=cloud-optimized"
+    }
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "ENSEMBLE_FLOOD_20261103T093911_VV_SA020M_E072N066T3",
+   "bbox": [
+    -61.01335412266625,
+    -4.886382309948178,
+    -58.31998533742473,
+    -2.166556240781173
+   ],
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       -61.01335412266625,
+       -4.886382309948178
+      ],
+      [
+       -61.010398672502504,
+       -2.1734202501558726
+      ],
+      [
+       -58.332527922188284,
+       -2.166556240781173
+      ],
+      [
+       -58.31998533742473,
+       -4.878870743862338
+      ],
+      [
+       -61.01335412266625,
+       -4.886382309948178
+      ]
+     ]
+    ]
+   },
+   "properties": {
+    "datetime": "2026-11-03T09:39:11Z",
+    "Equi7Tile": "SA020M_E072N066T3"
+   },
+   "assets": {
+    "ensemble_water_extent": {
+     "href": "https://data.eodc.eu/collections/GFM_LAYERS/obswater_mask/SA020M/2026/11/03/ENSEMBLE_OBSWATER_20261103T093911_VV_SA020M_E072N066T3.tif",
+     "type": "image/tiff; application=geotiff; profile=cloud-optimized"
+    },
+    "ensemble_flood_extent": {
+     "href": "https://data.eodc.eu/collections/GFM_LAYERS/flood_extent/SA020M/2026/11/03/ENSEMBLE_FLOOD_20261103T093911_VV_SA020M_E072N066T3.tif",
+     "type": "image/tiff; application=geotiff; profile=cloud-optimized"
+    },
+    "exclusion_mask": {
+     "href": "https://data.eodc.eu/collections/GFM_LAYERS/exlusion_mask/SA020M/2026/11/03/ENSEMBLE_EXCLAYER_20261103T093911_VV_SA020M_E072N066T3.tif",
+     "type": "image/tiff; application=geotiff; profile=cloud-optimized"
+    }
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "ENSEMBLE_FLOOD_20261103T093846_VV_SA020M_E072N066T3",
+   "bbox": [
+    -61.01335412266625,
+    -4.886382309948178,
+    -58.31998533742473,
+    -2.166556240781173
+   ],
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       -61.01335412266625,
+       -4.886382309948178
+      ],
+      [
+       -61.010398672502504,
+       -2.1734202501558726
+      ],
+      [
+       -58.332527922188284,
+       -2.166556240781173
+      ],
+      [
+       -58.31998533742473,
+       -4.878870743862338
+      ],
+      [
+       -61.01335412266625,
+       -4.886382309948178
+      ]
+     ]
+    ]
+   },
+   "properties": {
+    "datetime": "2026-11-03T09:38:46Z",
+    "Equi7Tile": "SA020M_E072N066T3"
+   },
+   "assets": {
+    "ensemble_water_extent": {
+     "href": "https://data.eodc.eu/collections/GFM_LAYERS/obswater_mask/SA020M/2026/11/03/ENSEMBLE_OBSWATER_20261103T093846_VV_SA020M_E072N066T3.tif",
+     "type": "image/tiff; application=geotiff; profile=cloud-optimized"
+    },
+    "ensemble_flood_extent": {
+     "href": "https://data.eodc.eu/collections/GFM_LAYERS/flood_extent/SA020M/2026/11/03/ENSEMBLE_FLOOD_20261103T093846_VV_SA020M_E072N066T3.tif",
+     "type": "image/tiff; application=geotiff; profile=cloud-optimized"
+    },
+    "exclusion_mask": {
+     "href": "https://data.eodc.eu/collections/GFM_LAYERS/exlusion_mask/SA020M/2026/11/03/ENSEMBLE_EXCLAYER_20261103T093846_VV_SA020M_E072N066T3.tif",
+     "type": "image/tiff; application=geotiff; profile=cloud-optimized"
+    }
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "ENSEMBLE_FLOOD_20261103T093821_VV_SA020M_E072N066T3",
+   "bbox": [
+    -61.01335412266625,
+    -4.886382309948178,
+    -58.31998533742473,
+    -2.166556240781173
+   ],
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       -61.01335412266625,
+       -4.886382309948178
+      ],
+      [
+       -61.010398672502504,
+       -2.1734202501558726
+      ],
+      [
+       -58.332527922188284,
+       -2.166556240781173
+      ],
+      [
+       -58.31998533742473,
+       -4.878870743862338
+      ],
+      [
+       -61.01335412266625,
+       -4.886382309948178
+      ]
+     ]
+    ]
+   },
+   "properties": {
+    "datetime": "2026-11-03T09:38:21Z",
+    "Equi7Tile": "SA020M_E072N066T3"
+   },
+   "assets": {
+    "ensemble_water_extent": {
+     "href": "https://data.eodc.eu/collections/GFM_LAYERS/obswater_mask/SA020M/2026/11/03/ENSEMBLE_OBSWATER_20261103T093821_VV_SA020M_E072N066T3.tif",
+     "type": "image/tiff; application=geotiff; profile=cloud-optimized"
+    },
+    "ensemble_flood_extent": {
+     "href": "https://data.eodc.eu/collections/GFM_LAYERS/flood_extent/SA020M/2026/11/03/ENSEMBLE_FLOOD_20261103T093821_VV_SA020M_E072N066T3.tif",
+     "type": "image/tiff; application=geotiff; profile=cloud-optimized"
+    },
+    "exclusion_mask": {
+     "href": "https://data.eodc.eu/collections/GFM_LAYERS/exlusion_mask/SA020M/2026/11/03/ENSEMBLE_EXCLAYER_20261103T093821_VV_SA020M_E072N066T3.tif",
+     "type": "image/tiff; application=geotiff; profile=cloud-optimized"
+    }
+   }
+  }
+ ]
+}
