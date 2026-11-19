@@ -54,3 +54,14 @@ SELECT 'a0000000-0000-0000-0000-000000000001', 'Rio Negro acima da cota de alert
        '{"origem":"telemetria-ana"}'
 WHERE NOT EXISTS (SELECT 1 FROM public.alerts WHERE metadata->>'origem' = 'telemetria-ana');
 GRANT SELECT ON ALL TABLES IN SCHEMA public TO anon, authenticated, service_role;
+
+-- pg_net assíncrono de mentira: http_get só registra e devolve um id; o
+-- teste grava a "resposta" em net._http_response com esse id.
+CREATE TABLE IF NOT EXISTS net._http_response (
+  id bigint PRIMARY KEY, status_code integer, content_type text, headers jsonb,
+  content text, timed_out boolean, error_msg text, created timestamptz NOT NULL DEFAULT now());
+CREATE SEQUENCE IF NOT EXISTS net.pedido_seq;
+CREATE OR REPLACE FUNCTION net.http_get(url text, params jsonb DEFAULT '{}', headers jsonb DEFAULT '{}', timeout_milliseconds int DEFAULT 5000)
+RETURNS bigint LANGUAGE sql AS $$ INSERT INTO net.chamadas VALUES (url, NULL); SELECT nextval('net.pedido_seq') $$;
+CREATE OR REPLACE FUNCTION cron.unschedule(n text) RETURNS boolean LANGUAGE sql AS
+$$ DELETE FROM cron.job WHERE jobname = n RETURNING true $$;
