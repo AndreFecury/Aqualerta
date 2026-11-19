@@ -89,6 +89,46 @@ export function leiturasDoHorario(estacao: number, json: unknown): Leitura[] {
   return saida;
 }
 
+/** Acumulado de 24 h de cada estação, direto da lista do CEMADEN.
+ *  `null` = estação sem dado agora (não é zero). */
+export function acumuladosDaLista(lista: unknown): Map<number, number | null> {
+  const m = new Map<number, number | null>();
+  // deno-lint-ignore no-explicit-any
+  for (const bloco of (Array.isArray(lista) ? lista as any[] : [])) {
+    for (const e of bloco?.estacao ?? []) {
+      const v = e?.acumulado;
+      m.set(Number(e?.idestacao), typeof v === "number" && Number.isFinite(v) && v >= 0 ? v : null);
+    }
+  }
+  return m;
+}
+
+/** Quem precisa da consulta hora a hora nesta coleta: só estações com chuva
+ *  nas últimas 24 h, as de mais chuva primeiro, no máximo `max`. Estação
+ *  com 0 mm em 24 h não está chovendo agora: dispensa a consulta.
+ *  O CEMADEN bloqueia por alguns minutos quem faz muitos pedidos seguidos
+ *  (visto em 19/11/2026), então pedir pouco é requisito, não capricho. */
+export function quemConsultar(
+  estacoes: number[], acum: Map<number, number | null>, max: number,
+): { consultar: number[]; secas: number[]; semDado: number[] } {
+  const secas: number[] = [], semDado: number[] = [], comChuva: number[] = [];
+  for (const id of estacoes) {
+    const v = acum.get(id);
+    if (v === undefined || v === null) semDado.push(id);
+    else if (v === 0) secas.push(id);
+    else comChuva.push(id);
+  }
+  comChuva.sort((a, b) => (acum.get(b) ?? 0) - (acum.get(a) ?? 0));
+  return { consultar: comChuva.slice(0, max), secas, semDado };
+}
+
+/** Início da hora corrente em UTC (ISO), para gravar o zero das estações secas. */
+export function horaCheiaUtc(agora = new Date()): string {
+  const d = new Date(agora);
+  d.setUTCMinutes(0, 0, 0);
+  return d.toISOString();
+}
+
 /** Executa tarefas com no máximo `n` ao mesmo tempo (educado com o CEMADEN). */
 export async function emLotes<T, R>(itens: T[], n: number, f: (x: T) => Promise<R>): Promise<R[]> {
   const saida: R[] = new Array(itens.length);

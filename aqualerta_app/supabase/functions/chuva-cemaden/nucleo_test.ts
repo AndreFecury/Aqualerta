@@ -6,7 +6,10 @@
 //   valor absurdo de 3600 mm que o CEMADEN publicou).
 // - horario_manaus_6740.json / horario_mindu_8747.json: 48 h hora a hora.
 import { assert, assertEquals } from "jsr:@std/assert@1.0.8";
-import { emLotes, estacoesDosMunicipios, leiturasDoHorario, semJsonp } from "./nucleo.ts";
+import {
+  acumuladosDaLista, emLotes, estacoesDosMunicipios, horaCheiaUtc, leiturasDoHorario, quemConsultar,
+  semJsonp,
+} from "./nucleo.ts";
 
 const dir = new URL("./fixtures/", import.meta.url);
 const ler = (n: string) => Deno.readTextFileSync(new URL(n, dir));
@@ -76,4 +79,27 @@ Deno.test("emLotes: respeita o limite de chamadas simultâneas e a ordem", async
   });
   assertEquals(r, [10, 20, 30, 40, 50, 60, 70]);
   assert(pico <= 3);
+});
+
+Deno.test("acumulados reais da lista: zero, chuva e sem dado", () => {
+  const acum = acumuladosDaLista(semJsonp(ler("estacoes_recorte.js")));
+  assertEquals(acum.get(6740), 0); // Colônia Antônio Aleixo, seca
+  assertEquals(acum.get(8327), 3600.2); // o valor absurdo vem como veio; a regra no banco descarta
+  const manaus = estacoesDosMunicipios(semJsonp(ler("estacoes_recorte.js")), MUNICIPIOS)
+    .filter((e) => e.region_id === "manaus").map((e) => e.id);
+  const q = quemConsultar(manaus, acum, 8);
+  // Na fixture: 11 secas, 1 com chuva (Mauazinho, 0,4 mm) e 2 sem dado.
+  assertEquals(q.secas.length + q.consultar.length + q.semDado.length, 14);
+  assertEquals(q.semDado.length, 2);
+  assert(q.consultar.length >= 1 && q.consultar.length <= 8);
+});
+
+Deno.test("quemConsultar: as de mais chuva primeiro e no máximo N", () => {
+  const acum = new Map<number, number | null>([[1, 0], [2, 5], [3, 40], [4, null], [5, 12]]);
+  assertEquals(quemConsultar([1, 2, 3, 4, 5, 6], acum, 2),
+    { consultar: [3, 5], secas: [1], semDado: [4, 6] });
+});
+
+Deno.test("hora cheia em UTC", () => {
+  assertEquals(horaCheiaUtc(new Date("2026-11-19T04:41:59.123Z")), "2026-11-19T04:00:00.000Z");
 });
