@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:aqualerta/core/auth/conta.dart';
 import 'package:aqualerta/core/auth/login_google.dart';
 import 'package:aqualerta/core/domain/severidade.dart';
 import 'package:aqualerta/core/notificacoes/avisos_service.dart';
@@ -185,6 +186,14 @@ class PerfilScreen extends StatelessWidget {
                   },
                   child: const Text('Sair da conta'),
                 ),
+                const SizedBox(height: 8),
+                TextButton(
+                  key: const Key('excluir-conta'),
+                  style: TextButton.styleFrom(
+                      foregroundColor: c.textoDe(Severidade.critico)),
+                  onPressed: () => _excluirConta(context),
+                  child: const Text('Excluir conta'),
+                ),
                 const SizedBox(height: 16),
                 FutureBuilder<PackageInfo>(
                   future: PackageInfo.fromPlatform(),
@@ -202,6 +211,44 @@ class PerfilScreen extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+/// Pede confirmação clara antes de apagar: a exclusão não tem volta.
+Future<void> _excluirConta(BuildContext context) async {
+  final c = AquaColors.of(context);
+  final confirmou = await showDialog<bool>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: const Text('Excluir sua conta?'),
+      content: const Text(
+          'Sua conta, as regiões que você segue e as preferências de aviso '
+          'serão apagadas agora, e você deixará de receber alertas neste '
+          'celular. Isso não pode ser desfeito.'),
+      actions: [
+        TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar')),
+        FilledButton(
+          key: const Key('confirmar-exclusao'),
+          style: FilledButton.styleFrom(
+              backgroundColor: c.textoDe(Severidade.critico)),
+          onPressed: () => Navigator.pop(ctx, true),
+          child: const Text('Excluir conta'),
+        ),
+      ],
+    ),
+  );
+  if (confirmou != true || !context.mounted) return;
+  final aviso = ScaffoldMessenger.of(context);
+  try {
+    await Conta.excluir();
+    aviso.showSnackBar(const SnackBar(
+        content: Text('Conta excluída. Seus dados foram apagados.')));
+  } catch (_) {
+    aviso.showSnackBar(const SnackBar(
+        content: Text(
+            'Não foi possível excluir a conta agora. Confira a internet e tente de novo.')));
   }
 }
 
