@@ -14,13 +14,15 @@
   Uso (PowerShell, dentro da pasta aqualerta_app do clone):
     .\tool\publicar_versao.ps1 -Notas "Correções no mapa"
   Opções:
-    -Defines  arquivo com MAPTILER_KEY e GOOGLE_WEB_CLIENT_ID
-              (padrão: Downloads\aqualerta_app_corrigido\build-defines.json)
+    -Defines  arquivo com GOOGLE_WEB_CLIENT_ID (padrão:
+              Downloads\aqualerta_app_corrigido\build-defines-publico.json).
+              NÃO pode ter MAPTILER_KEY: a APK fica pública no site; o app
+              recebe a chave do mapa do Supabase depois do login.
     -SemBuild usa a APK já gerada em build\app\outputs\flutter-apk
 #>
 param(
   [Parameter(Mandatory = $true)][string]$Notas,
-  [string]$Defines = "$env:USERPROFILE\Downloads\aqualerta_app_corrigido\build-defines.json",
+  [string]$Defines = "$env:USERPROFILE\Downloads\aqualerta_app_corrigido\build-defines-publico.json",
   [string]$Flutter = "$env:USERPROFILE\Downloads\flutter\bin\flutter.bat",
   [string]$Repo = "https://github.com/AndreFecury/Aqualerta.git",
   [string]$Site = "https://andrefecury.github.io/Aqualerta",
@@ -46,10 +48,14 @@ Write-Host "Publicando $versao (+$codigo); no site hoje: +$publicada"
 $apk = "build\app\outputs\flutter-apk\app-release.apk"
 if (-not $SemBuild) {
   if (-not (Test-Path $Defines)) { throw "Arquivo de defines não encontrado: $Defines" }
+  if ((Get-Content $Defines -Raw) -match 'MAPTILER_KEY') {
+    throw "O arquivo $Defines tem MAPTILER_KEY. A APK publicada não pode levar a chave do mapa."
+  }
   & $Flutter build apk --release "--dart-define-from-file=$Defines"
   if ($LASTEXITCODE -ne 0) { throw "flutter build falhou" }
 }
 if (-not (Test-Path $apk)) { throw "APK não encontrada: $apk" }
+if ($SemBuild) { Write-Host "Atenção: -SemBuild usa a APK existente; confira que ela foi gerada sem MAPTILER_KEY." }
 
 # 3. SHA-256 e tamanho
 $sha = (Get-FileHash $apk -Algorithm SHA256).Hash.ToLower()
