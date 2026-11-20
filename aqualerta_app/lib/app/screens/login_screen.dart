@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:aqualerta/core/auth/login_google.dart';
 import 'package:aqualerta/shared/theme/aqua_colors.dart';
 import 'package:aqualerta/shared/widgets/logo_aqualerta.dart';
 
@@ -16,6 +18,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _senha = TextEditingController();
   bool _criandoConta = false;
   bool _enviando = false;
+  bool _entrandoGoogle = false;
   bool _senhaVisivel = false;
   String? _erro;
   String? _info;
@@ -54,6 +57,24 @@ class _LoginScreenState extends State<LoginScreen> {
           'Sem conexão com o servidor. Confira a internet e tente de novo.');
     } finally {
       if (mounted) setState(() => _enviando = false);
+    }
+  }
+
+  Future<void> _entrarComGoogle() async {
+    setState(() {
+      _entrandoGoogle = true;
+      _erro = null;
+      _info = null;
+    });
+    try {
+      await LoginGoogle.entrar(); // desistir do seletor não é erro
+    } catch (_) {
+      if (mounted) {
+        setState(() => _erro =
+            'Não foi possível entrar com o Google. Tente de novo ou use o e-mail.');
+      }
+    } finally {
+      if (mounted) setState(() => _entrandoGoogle = false);
     }
   }
 
@@ -111,6 +132,50 @@ class _LoginScreenState extends State<LoginScreen> {
                       style: t.bodyLarge!.copyWith(fontSize: 17),
                     ),
                     const SizedBox(height: 28),
+                    if (LoginGoogle.disponivel) ...[
+                      // Caminho mais curto: um toque, sem senha.
+                      OutlinedButton(
+                        key: const Key('entrar-google'),
+                        style: OutlinedButton.styleFrom(
+                          backgroundColor: Colors.white,
+                          foregroundColor: const Color(0xFF1F1F1F),
+                          side: const BorderSide(color: Color(0xFF747775)),
+                        ),
+                        onPressed: (_enviando || _entrandoGoogle)
+                            ? null
+                            : _entrarComGoogle,
+                        child: _entrandoGoogle
+                            ? const SizedBox(
+                                width: 22,
+                                height: 22,
+                                child: CircularProgressIndicator(
+                                    strokeWidth: 2.5, color: Color(0xFF1F1F1F)))
+                            : Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  SvgPicture.asset('assets/logos/google_g.svg',
+                                      width: 20,
+                                      height: 20,
+                                      excludeFromSemantics: true),
+                                  const SizedBox(width: 12),
+                                  const Flexible(
+                                      child: Text('Continuar com o Google')),
+                                ],
+                              ),
+                      ),
+                      const SizedBox(height: 20),
+                      Row(
+                        children: [
+                          Expanded(child: Divider(color: c.linha)),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            child: Text('ou com e-mail', style: t.bodyMedium),
+                          ),
+                          Expanded(child: Divider(color: c.linha)),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                    ],
                     TextFormField(
                       controller: _email,
                       keyboardType: TextInputType.emailAddress,
@@ -165,7 +230,8 @@ class _LoginScreenState extends State<LoginScreen> {
                     ],
                     const SizedBox(height: 20),
                     FilledButton(
-                      onPressed: _enviando ? null : _enviar,
+                      onPressed:
+                          (_enviando || _entrandoGoogle) ? null : _enviar,
                       child: _enviando
                           ? SizedBox(
                               width: 22,

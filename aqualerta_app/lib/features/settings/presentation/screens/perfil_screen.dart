@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:aqualerta/core/auth/login_google.dart';
 import 'package:aqualerta/core/domain/severidade.dart';
 import 'package:aqualerta/core/notificacoes/avisos_service.dart';
 import 'package:aqualerta/core/state/painel_cubit.dart';
@@ -179,6 +180,7 @@ class PerfilScreen extends StatelessWidget {
                   ),
                   onPressed: () async {
                     await AvisosService.instancia.esquecerAparelho();
+                    await LoginGoogle.sair();
                     await Supabase.instance.client.auth.signOut();
                   },
                   child: const Text('Sair da conta'),
