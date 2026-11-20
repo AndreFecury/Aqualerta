@@ -22,8 +22,7 @@ class LogoMapTiler extends StatelessWidget {
         borderRadius: BorderRadius.circular(6),
         child: InkWell(
           borderRadius: BorderRadius.circular(6),
-          onTap: () =>
-              launchUrl(_site, mode: LaunchMode.externalApplication),
+          onTap: () => launchUrl(_site, mode: LaunchMode.externalApplication),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
             child: SvgPicture.asset(asset, height: 18),

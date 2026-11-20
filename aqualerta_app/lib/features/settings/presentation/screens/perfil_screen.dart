@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:aqualerta/core/atualizacao/atualizacao.dart';
 import 'package:aqualerta/core/auth/conta.dart';
 import 'package:aqualerta/core/auth/login_google.dart';
 import 'package:aqualerta/core/domain/severidade.dart';
@@ -205,12 +206,28 @@ class PerfilScreen extends StatelessWidget {
                         style: t.bodySmall),
                   ),
                 ),
+                Center(
+                  child: TextButton(
+                    key: const Key('procurar-atualizacao'),
+                    onPressed: () => _procurarAtualizacao(context),
+                    child: const Text('Procurar atualização'),
+                  ),
+                ),
               ],
             ),
           ),
         ],
       ),
     );
+  }
+}
+
+Future<void> _procurarAtualizacao(BuildContext context) async {
+  final aviso = ScaffoldMessenger.of(context);
+  final tem = await context.read<AtualizacaoCubit>().verificar(manual: true);
+  if (!tem) {
+    aviso.showSnackBar(const SnackBar(
+        content: Text('Você já tem a versão mais nova do AquaAlerta.')));
   }
 }
 

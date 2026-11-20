@@ -133,8 +133,10 @@ class SateliteCubit extends Cubit<Map<String, DadoSatelite>> {
     _por(regionId, const DadoSatelite(SituacaoSatelite.carregando));
     try {
       final obs = await _fonte.ultima(regionId);
-      _por(regionId,
-          DadoSatelite(SituacaoSatelite.pronto, observacao: obs, buscadoEm: _agora()));
+      _por(
+          regionId,
+          DadoSatelite(SituacaoSatelite.pronto,
+              observacao: obs, buscadoEm: _agora()));
     } catch (_) {
       _por(regionId, DadoSatelite(SituacaoSatelite.erro, buscadoEm: _agora()));
     }

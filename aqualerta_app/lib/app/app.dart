@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:aqualerta/core/atualizacao/atualizacao.dart';
 import 'package:aqualerta/shared/theme/aqua_theme.dart';
 import 'package:aqualerta/features/settings/presentation/cubit/aparencia_cubit.dart';
 import 'package:aqualerta/features/settings/presentation/cubit/notificacoes_cubit.dart';
@@ -47,6 +48,8 @@ class _AqualertaAppState extends State<AqualertaApp> {
                 cliente: Supabase.instance.client)),
         BlocProvider(create: (_) => CamadasCubit(widget.preferencias)),
         BlocProvider(create: (_) => SateliteCubit(SateliteRepository())),
+        // Confere uma vez ao abrir se há versão nova do app.
+        BlocProvider(create: (_) => AtualizacaoCubit()..verificar()),
       ],
       child: BlocBuilder<AparenciaCubit, Aparencia>(
         builder: (context, aparencia) => MaterialApp.router(

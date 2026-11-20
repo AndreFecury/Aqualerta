@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:aqualerta/core/atualizacao/aviso_atualizacao.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:aqualerta/core/data/carta_datasource.dart';
 import 'package:aqualerta/core/notificacoes/avisos_service.dart';
@@ -83,32 +84,38 @@ class _Abas extends StatelessWidget {
 
     return Scaffold(
       body: child,
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: indice,
-        onDestinationSelected: (i) => context.go(_rotas[i]),
-        destinations: [
-          const NavigationDestination(
-              icon: Icon(Icons.map_outlined),
-              selectedIcon: Icon(Icons.map),
-              label: 'Mapa'),
-          NavigationDestination(
-            icon: Badge(
-                isLabelVisible: ativos > 0,
-                label: _NumeroQuePulsa(ativos),
-                child: const Icon(Icons.notifications_outlined)),
-            selectedIcon: Badge(
-                isLabelVisible: ativos > 0,
-                label: _NumeroQuePulsa(ativos),
-                child: const Icon(Icons.notifications)),
-            label: 'Alertas',
-            tooltip: ativos > 0 ? 'Alertas: $ativos ativos' : 'Alertas',
+      bottomNavigationBar: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const AvisoAtualizacao(),
+          NavigationBar(
+            selectedIndex: indice,
+            onDestinationSelected: (i) => context.go(_rotas[i]),
+            destinations: [
+              const NavigationDestination(
+                  icon: Icon(Icons.map_outlined),
+                  selectedIcon: Icon(Icons.map),
+                  label: 'Mapa'),
+              NavigationDestination(
+                icon: Badge(
+                    isLabelVisible: ativos > 0,
+                    label: _NumeroQuePulsa(ativos),
+                    child: const Icon(Icons.notifications_outlined)),
+                selectedIcon: Badge(
+                    isLabelVisible: ativos > 0,
+                    label: _NumeroQuePulsa(ativos),
+                    child: const Icon(Icons.notifications)),
+                label: 'Alertas',
+                tooltip: ativos > 0 ? 'Alertas: $ativos ativos' : 'Alertas',
+              ),
+              const NavigationDestination(
+                  icon: Icon(Icons.straighten), label: 'Rios'),
+              const NavigationDestination(
+                  icon: Icon(Icons.person_outline),
+                  selectedIcon: Icon(Icons.person),
+                  label: 'Perfil'),
+            ],
           ),
-          const NavigationDestination(
-              icon: Icon(Icons.straighten), label: 'Rios'),
-          const NavigationDestination(
-              icon: Icon(Icons.person_outline),
-              selectedIcon: Icon(Icons.person),
-              label: 'Perfil'),
         ],
       ),
     );

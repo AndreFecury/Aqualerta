@@ -153,20 +153,22 @@ class AlertaV3 extends Equatable {
 
   /// Liga a estação do rio ao alerta, para a severidade seguir as cotas.
   /// Aviso de chuva não tem nada a ver com o nível do rio: fica como veio.
-  AlertaV3 comEstacao(Estacao? e) => ehChuva ? this : AlertaV3(
-        id: id,
-        regiaoId: regiaoId,
-        regiaoNome: regiaoNome,
-        titulo: titulo,
-        texto: texto,
-        severidadeOriginal: severidadeOriginal,
-        ativo: ativo,
-        emitidoEm: emitidoEm,
-        encerradoEm: encerradoEm,
-        eventoId: eventoId,
-        estacao: e,
-        origem: origem,
-      );
+  AlertaV3 comEstacao(Estacao? e) => ehChuva
+      ? this
+      : AlertaV3(
+          id: id,
+          regiaoId: regiaoId,
+          regiaoNome: regiaoNome,
+          titulo: titulo,
+          texto: texto,
+          severidadeOriginal: severidadeOriginal,
+          ativo: ativo,
+          emitidoEm: emitidoEm,
+          encerradoEm: encerradoEm,
+          eventoId: eventoId,
+          estacao: e,
+          origem: origem,
+        );
 
   @override
   List<Object?> get props => [id, ativo, estacao];
