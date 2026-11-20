@@ -179,7 +179,8 @@ class _MapaScreenState extends State<MapaScreen>
   /// Botão voltar no Mapa: fecha a busca, recolhe o cartão e volta para a
   /// região inicial, nessa ordem. Nada a desfazer: deixa o app decidir.
   bool _voltar() {
-    if (!mounted) return false;
+    // O Mapa fica vivo nas outras abas: só responde quando está na frente.
+    if (!mounted || !TickerMode.valuesOf(context).enabled) return false;
     final foco = FocusManager.instance.primaryFocus;
     final buscando = foco != null &&
         foco.hasPrimaryFocus &&

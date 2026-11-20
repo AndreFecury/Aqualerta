@@ -1,3 +1,4 @@
+import 'package:animations/animations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:aqualerta/app/voltar.dart';
@@ -18,7 +19,6 @@ import 'package:aqualerta/features/settings/presentation/screens/perfil_screen.d
 import 'screens/login_screen.dart';
 
 final _raiz = GlobalKey<NavigatorState>();
-final _abas = GlobalKey<NavigatorState>();
 
 final router = GoRouter(
   navigatorKey: _raiz,
@@ -32,68 +32,127 @@ final router = GoRouter(
   },
   routes: [
     GoRoute(path: '/login', builder: (_, __) => const LoginScreen()),
-    ShellRoute(
-      navigatorKey: _abas,
-      builder: (context, state, child) => BlocProvider(
+    // Endereços antigos continuam funcionando.
+    GoRoute(path: '/regions', redirect: (_, __) => '/rios'),
+    GoRoute(path: '/settings', redirect: (_, __) => '/perfil'),
+    // Cada aba tem a própria pilha e fica viva ao trocar (como nos apps
+    // grandes): voltar ao Mapa não recarrega nem perde a posição.
+    StatefulShellRoute(
+      builder: (context, state, shell) => BlocProvider(
         // Criado depois do login: as consultas precisam do usuário autenticado.
         create: (_) => PainelCubit(CartaDatasource()),
-        child: _OuvinteAvisos(child: _Abas(child: child)),
+        child: _OuvinteAvisos(child: _Abas(shell: shell)),
       ),
-      routes: [
-        GoRoute(
-            path: '/map',
-            pageBuilder: (_, s) => _paginaDeAba(s, const MapaScreen())),
-        GoRoute(
-          path: '/alerts',
-          pageBuilder: (_, s) => _paginaDeAba(s, const AlertasScreen()),
-          routes: [
-            GoRoute(
-                path: ':id',
-                builder: (_, s) =>
-                    DetalheAlertaScreen(alertaId: s.pathParameters['id']!)),
-          ],
-        ),
-        GoRoute(
-            path: '/rios',
-            pageBuilder: (_, s) => _paginaDeAba(s, const RiosScreen())),
-        GoRoute(
-            path: '/perfil',
-            pageBuilder: (_, s) => _paginaDeAba(s, const PerfilScreen())),
-        // Endereços antigos continuam funcionando.
-        GoRoute(path: '/regions', redirect: (_, __) => '/rios'),
-        GoRoute(path: '/settings', redirect: (_, __) => '/perfil'),
+      navigatorContainerBuilder: (context, shell, filhos) =>
+          TrocaDeAbas(indice: shell.currentIndex, filhos: filhos),
+      branches: [
+        StatefulShellBranch(routes: [
+          GoRoute(path: '/map', builder: (_, __) => const MapaScreen()),
+        ]),
+        StatefulShellBranch(routes: [
+          GoRoute(
+            path: '/alerts',
+            builder: (_, __) => const AlertasScreen(),
+            routes: [
+              GoRoute(
+                  path: ':id',
+                  builder: (_, s) =>
+                      DetalheAlertaScreen(alertaId: s.pathParameters['id']!)),
+            ],
+          ),
+        ]),
+        StatefulShellBranch(routes: [
+          GoRoute(path: '/rios', builder: (_, __) => const RiosScreen()),
+        ]),
+        StatefulShellBranch(routes: [
+          GoRoute(path: '/perfil', builder: (_, __) => const PerfilScreen()),
+        ]),
       ],
     ),
   ],
 );
 
-/// Troca de aba: a tela nova entra deslizando um pouco (6% da largura) do
-/// lado da aba tocada, com fade, em 240 ms; a antiga some em 120 ms. Curto
-/// de propósito: as abas são o que mais se usa no app. Sem movimento quando
-/// o celular pede para reduzir animações.
-CustomTransitionPage<void> _paginaDeAba(GoRouterState s, Widget tela) =>
-    CustomTransitionPage<void>(
-      key: s.pageKey,
-      child: tela,
-      transitionDuration: const Duration(milliseconds: 240),
-      reverseTransitionDuration: const Duration(milliseconds: 120),
-      transitionsBuilder: (context, animacao, _, filho) {
-        if (MediaQuery.disableAnimationsOf(context)) return filho;
-        final curva = CurvedAnimation(
-            parent: animacao,
-            curve: const Cubic(0.16, 1, 0.3, 1),
-            reverseCurve: Curves.easeIn);
-        return FadeTransition(
-          opacity: curva,
-          child: SlideTransition(
-            position:
-                Tween(begin: Offset(0.06 * Abas.direcao, 0), end: Offset.zero)
-                    .animate(curva),
-            child: filho,
-          ),
-        );
-      },
+/// Troca de aba no padrão "fade through" do Material Design, o mesmo dos
+/// apps do Google para o menu de baixo: a tela atual some (primeiros 30%),
+/// depois a nova aparece crescendo de 92% para 100%. As duas nunca se
+/// misturam, e não sugere arrastar de lado (as abas não são uma sequência).
+/// 350 ms: tela inteira mudando pede um pouco mais que um botão. Sem
+/// movimento quando o celular pede para reduzir animações.
+class TrocaDeAbas extends StatefulWidget {
+  const TrocaDeAbas({required this.indice, required this.filhos});
+  final int indice;
+  final List<Widget> filhos;
+
+  static const duracao = Duration(milliseconds: 350);
+
+  @override
+  State<TrocaDeAbas> createState() => TrocaDeAbasEstado();
+}
+
+class TrocaDeAbasEstado extends State<TrocaDeAbas>
+    with SingleTickerProviderStateMixin {
+  late final _troca =
+      AnimationController(vsync: this, duration: TrocaDeAbas.duracao, value: 1)
+        ..addStatusListener((s) {
+          if (s == AnimationStatus.completed && mounted) {
+            setState(() => _anterior = null);
+          }
+        });
+  int? _anterior;
+
+  @override
+  void didUpdateWidget(TrocaDeAbas antigo) {
+    super.didUpdateWidget(antigo);
+    if (antigo.indice == widget.indice) return;
+    if (MediaQuery.disableAnimationsOf(context)) {
+      _anterior = null;
+      _troca.value = 1;
+    } else {
+      _anterior = antigo.indice;
+      _troca.forward(from: 0);
+    }
+  }
+
+  @override
+  void dispose() {
+    _troca.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final fundo = Theme.of(context).scaffoldBackgroundColor;
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        for (var i = 0; i < widget.filhos.length; i++) _camada(i, fundo),
+      ],
     );
+  }
+
+  Widget _camada(int i, Color fundo) {
+    final atual = i == widget.indice;
+    final saindo = i == _anterior;
+    // Mesma estrutura para todas as abas, sempre: só as animações mudam.
+    // Assim nenhuma aba é recriada (e perde o estado) ao trocar.
+    return Offstage(
+      key: ValueKey(i),
+      offstage: !atual && !saindo,
+      child: TickerMode(
+        enabled: atual || saindo,
+        child: IgnorePointer(
+          ignoring: !atual,
+          child: FadeThroughTransition(
+            animation: atual ? _troca : kAlwaysCompleteAnimation,
+            secondaryAnimation: saindo ? _troca : kAlwaysDismissedAnimation,
+            fillColor: fundo,
+            child: widget.filhos[i],
+          ),
+        ),
+      ),
+    );
+  }
+}
 
 /// Rotas das abas, na ordem do menu de baixo.
 const rotasDasAbas = ['/map', '/alerts', '/rios', '/perfil'];
@@ -105,20 +164,23 @@ int indiceDaAba(String caminho) => rotasDasAbas
 class Abas {
   Abas._();
 
-  /// 1 = a aba nova está à direita da anterior; -1 = à esquerda.
-  static double direcao = 1;
+  static StatefulNavigationShell? _shell;
 
+  /// Vai para a aba [destino]. Tocar na aba em que já está volta ao início
+  /// dela (ex.: do detalhe de um alerta para a lista), como nos apps grandes.
   static void irPara(BuildContext context, int destino) {
-    final atual = indiceDaAba(GoRouterState.of(context).uri.path);
-    if (destino == atual) return;
-    direcao = destino > atual ? 1 : -1;
-    context.go(rotasDasAbas[destino]);
+    final shell = _shell;
+    if (shell == null) {
+      context.go(rotasDasAbas[destino]);
+      return;
+    }
+    shell.goBranch(destino, initialLocation: destino == shell.currentIndex);
   }
 }
 
 class _Abas extends StatelessWidget {
-  const _Abas({required this.child});
-  final Widget child;
+  const _Abas({required this.shell});
+  final StatefulNavigationShell shell;
 
   static DateTime? _ultimoVoltar;
 
@@ -147,8 +209,8 @@ class _Abas extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final local = GoRouterState.of(context).uri.path;
-    final indice = indiceDaAba(local);
+    Abas._shell = shell;
+    final indice = shell.currentIndex;
     final ativos =
         context.select<PainelCubit, int>((c) => c.state.ativos.length);
 
@@ -158,7 +220,7 @@ class _Abas extends StatelessWidget {
         if (!saiu) _voltar(context, indice);
       },
       child: Scaffold(
-        body: child,
+        body: shell,
         bottomNavigationBar: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
