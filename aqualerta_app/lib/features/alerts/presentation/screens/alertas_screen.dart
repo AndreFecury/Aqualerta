@@ -55,6 +55,7 @@ class AlertasScreen extends StatelessWidget {
                   _Lista(
                     alertas: painel.ativos,
                     carregando: painel.carregando && !painel.temDados,
+                    destacarNovos: true,
                     topo: Padding(
                       padding: const EdgeInsets.fromLTRB(16, 12, 8, 4),
                       child: Row(
@@ -101,15 +102,31 @@ class _Lista extends StatelessWidget {
       {required this.alertas,
       required this.carregando,
       required this.vazio,
+      this.destacarNovos = false,
       this.topo});
   final List<AlertaV3> alertas;
   final bool carregando;
   final Widget vazio;
+  final bool destacarNovos;
   final Widget? topo;
+
+  /// Alertas ativos já mostrados nesta sessão. Os que existiam ao abrir não
+  /// são "novos"; os que chegam depois ganham um destaque passageiro.
+  static Set<String>? _vistos;
 
   @override
   Widget build(BuildContext context) {
     if (carregando) return const Center(child: CircularProgressIndicator());
+    final novos = <String>{};
+    if (destacarNovos) {
+      if (_vistos == null) {
+        _vistos = {for (final a in alertas) a.id};
+      } else {
+        for (final a in alertas) {
+          if (_vistos!.add(a.id)) novos.add(a.id);
+        }
+      }
+    }
     return RefreshIndicator(
       onRefresh: context.read<PainelCubit>().carregar,
       child: ListView(
@@ -117,7 +134,9 @@ class _Lista extends StatelessWidget {
         children: [
           if (topo != null) topo!,
           if (alertas.isEmpty) vazio,
-          for (final a in alertas) _LinhaAlerta(alerta: a),
+          for (final a in alertas)
+            _LinhaAlerta(
+                key: ValueKey(a.id), alerta: a, novo: novos.contains(a.id)),
         ],
       ),
     );
@@ -125,8 +144,9 @@ class _Lista extends StatelessWidget {
 }
 
 class _LinhaAlerta extends StatelessWidget {
-  const _LinhaAlerta({required this.alerta});
+  const _LinhaAlerta({super.key, required this.alerta, this.novo = false});
   final AlertaV3 alerta;
+  final bool novo;
 
   @override
   Widget build(BuildContext context) {
@@ -140,30 +160,43 @@ class _LinhaAlerta extends StatelessWidget {
       hint: 'Abre os detalhes do alerta',
       child: InkWell(
         onTap: () => context.push('/alerts/${alerta.id}'),
-        child: Container(
-          padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
-          decoration:
-              BoxDecoration(border: Border(bottom: BorderSide(color: c.linha))),
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    SeloSeveridade(
-                        severidade: alerta.severidade,
-                        mostrarAcao: alerta.ativo),
-                    const SizedBox(height: 6),
-                    Text(alerta.titulo, style: t.titleMedium),
-                    const SizedBox(height: 2),
-                    Text(alerta.regiaoNome, style: t.bodyMedium),
-                    const SizedBox(height: 2),
-                    Text(quando, style: t.bodySmall),
-                  ],
+        // Alerta que acabou de chegar: fundo na cor do nível que some em
+        // 1,5 s. Sem piscar nem tremer (alarme falso cansa).
+        child: TweenAnimationBuilder<double>(
+          tween: Tween(begin: novo ? 1 : 0, end: 0),
+          duration: MediaQuery.disableAnimationsOf(context)
+              ? Duration.zero
+              : const Duration(milliseconds: 1500),
+          curve: Curves.easeIn,
+          builder: (context, v, filho) => Container(
+            color: c.corDe(alerta.severidade).withValues(alpha: 0.22 * v),
+            child: filho,
+          ),
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
+            decoration: BoxDecoration(
+                border: Border(bottom: BorderSide(color: c.linha))),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SeloSeveridade(
+                          severidade: alerta.severidade,
+                          mostrarAcao: alerta.ativo),
+                      const SizedBox(height: 6),
+                      Text(alerta.titulo, style: t.titleMedium),
+                      const SizedBox(height: 2),
+                      Text(alerta.regiaoNome, style: t.bodyMedium),
+                      const SizedBox(height: 2),
+                      Text(quando, style: t.bodySmall),
+                    ],
+                  ),
                 ),
-              ),
-              Icon(Icons.chevron_right, color: c.tinta2),
-            ],
+                Icon(Icons.chevron_right, color: c.tinta2),
+              ],
+            ),
           ),
         ),
       ),

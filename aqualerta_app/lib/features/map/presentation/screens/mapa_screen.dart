@@ -119,9 +119,11 @@ class _MapaScreenState extends State<MapaScreen>
     final km = distanciaKm(origem, destino);
     if (km < 0.02 && (z1 - z0).abs() < 0.05) return;
 
+    // 300 ms num pulo curto, até 600 ms atravessando o estado: mais que
+    // isso parece lento (e o dedo pode interromper a qualquer momento).
     final duracao = Duration(
         milliseconds:
-            (450 + km * 2 + (z1 - z0).abs() * 60).clamp(450, 900).round());
+            (300 + km * 1.5 + (z1 - z0).abs() * 50).clamp(300, 600).round());
     _voo.stop();
     _voo.duration = duracao;
     final curva = CurvedAnimation(parent: _voo, curve: Curves.easeInOutCubic);
@@ -289,7 +291,11 @@ class _MapaScreenState extends State<MapaScreen>
                             mapController: _mapa,
                             options: MapOptions(
                               onPositionChanged: (_, gesto) {
-                                if (gesto) _mexeuNoMapa = true;
+                                if (!gesto) return;
+                                _mexeuNoMapa = true;
+                                // O dedo manda: para o voo da câmera em
+                                // vez de puxar o mapa de volta.
+                                if (_voo.isAnimating) _voo.stop();
                               },
                               initialCenter: regiao?.centro ?? _manaus,
                               initialZoom: 11,
@@ -400,7 +406,7 @@ class _MapaScreenState extends State<MapaScreen>
                                       Marker(
                                         point: r.centro!,
                                         width: 124,
-                                        height: 40,
+                                        height: 48, // área de toque mínima
                                         child: _MarcaRegiao(
                                           regiao: r,
                                           severidade:
@@ -410,8 +416,8 @@ class _MapaScreenState extends State<MapaScreen>
                                                   ? painel.estacaoDaRegiao(r)
                                                   : null,
                                           selecionada: r.id == regiao?.id,
-                                          aoTocar: () => setState(() =>
-                                              _regiaoSelecionadaId = r.id),
+                                          // Igual à busca: seleciona e enquadra.
+                                          aoTocar: () => _selecionar(r),
                                         ),
                                       ),
                                 // Estações que não têm região perto: marcador próprio, com gota.
@@ -634,7 +640,7 @@ class _BotaoMapa extends StatelessWidget {
 
 /// Marcador da região: amostra de hachura do risco e, se houver estação
 /// perto, o nível do rio na mesma etiqueta (um símbolo só, sem sobreposição).
-class _MarcaRegiao extends StatelessWidget {
+class _MarcaRegiao extends StatefulWidget {
   const _MarcaRegiao({
     required this.regiao,
     required this.severidade,
@@ -649,7 +655,23 @@ class _MarcaRegiao extends StatelessWidget {
   final VoidCallback aoTocar;
 
   @override
+  State<_MarcaRegiao> createState() => _MarcaRegiaoState();
+}
+
+class _MarcaRegiaoState extends State<_MarcaRegiao> {
+  bool _pressionado = false;
+
+  void _pressao(bool v) {
+    if (_pressionado != v) setState(() => _pressionado = v);
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final regiao = widget.regiao;
+    final severidade = widget.severidade;
+    final estacao = widget.estacao;
+    final selecionada = widget.selecionada;
+    final semMovimento = MediaQuery.disableAnimationsOf(context);
     final c = AquaColors.of(context);
     final t = Theme.of(context).textTheme;
     final nivel = (estacao?.leituraRecente() ?? false)
@@ -661,33 +683,49 @@ class _MarcaRegiao extends StatelessWidget {
           '${regiao.nome}: risco ${severidade.rotulo.toLowerCase()}${nivel != null ? ', rio a $nivel' : ''}',
       excludeSemantics: true,
       child: GestureDetector(
-        onTap: aoTocar,
+        behavior: HitTestBehavior.opaque, // os 48 de altura inteiros tocam
+        onTap: widget.aoTocar,
+        onTapDown: (_) => _pressao(true),
+        onTapUp: (_) => _pressao(false),
+        onTapCancel: () => _pressao(false),
         child: Center(
-          child: FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Container(
-              padding: const EdgeInsets.fromLTRB(5, 5, 8, 5),
-              decoration: BoxDecoration(
-                color: c.papel,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                    color: selecionada ? c.tinta : c.linha,
-                    width: selecionada ? 2.5 : 1),
-                boxShadow: [BoxShadow(color: c.sombra, blurRadius: 6)],
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  ClipRRect(
-                      borderRadius: BorderRadius.circular(14),
-                      child:
-                          AmostraHachura(severidade: severidade, tamanho: 24)),
-                  const SizedBox(width: 6),
-                  Text(nivel ?? regiao.nome,
-                      style: t.labelMedium!.copyWith(
-                          color: c.tinta, fontWeight: FontWeight.w700),
-                      textScaler: TextScaler.noScaling),
-                ],
+          child: AnimatedScale(
+            // Afunda um pouco ao pressionar (100 ms): resposta imediata.
+            scale: _pressionado ? 0.94 : 1,
+            duration: semMovimento
+                ? Duration.zero
+                : const Duration(milliseconds: 100),
+            curve: Curves.easeOut,
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: AnimatedContainer(
+                duration: semMovimento
+                    ? Duration.zero
+                    : const Duration(milliseconds: 150),
+                curve: Curves.easeOut,
+                padding: const EdgeInsets.fromLTRB(5, 5, 8, 5),
+                decoration: BoxDecoration(
+                  color: c.papel,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                      color: selecionada ? c.tinta : c.linha,
+                      width: selecionada ? 2.5 : 1),
+                  boxShadow: [BoxShadow(color: c.sombra, blurRadius: 6)],
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    ClipRRect(
+                        borderRadius: BorderRadius.circular(14),
+                        child: AmostraHachura(
+                            severidade: severidade, tamanho: 24)),
+                    const SizedBox(width: 6),
+                    Text(nivel ?? regiao.nome,
+                        style: t.labelMedium!.copyWith(
+                            color: c.tinta, fontWeight: FontWeight.w700),
+                        textScaler: TextScaler.noScaling),
+                  ],
+                ),
               ),
             ),
           ),
@@ -797,7 +835,34 @@ class _FolhaRegiao extends StatelessWidget {
                   : Text('Nenhuma região monitorada encontrada.',
                       style: t.bodyLarge)
             else
-              ..._conteudo(context, c, t),
+              // Trocar de região: o conteúdo novo entra suave (200 ms) e o
+              // antigo sai rápido (100 ms), sem pular de uma vez.
+              AnimatedSwitcher(
+                duration: MediaQuery.disableAnimationsOf(context)
+                    ? Duration.zero
+                    : const Duration(milliseconds: 200),
+                reverseDuration: const Duration(milliseconds: 100),
+                switchInCurve: const Cubic(0.16, 1, 0.3, 1),
+                switchOutCurve: Curves.easeIn,
+                layoutBuilder: (atual, anteriores) => Stack(
+                  alignment: Alignment.topCenter,
+                  children: [...anteriores, if (atual != null) atual],
+                ),
+                transitionBuilder: (filho, anim) => FadeTransition(
+                  opacity: anim,
+                  child: SlideTransition(
+                    position:
+                        Tween(begin: const Offset(0, 0.02), end: Offset.zero)
+                            .animate(anim),
+                    child: filho,
+                  ),
+                ),
+                child: Column(
+                  key: ValueKey(regiao!.id),
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: _conteudo(context, c, t),
+                ),
+              ),
           ],
         ),
       ),
@@ -1029,8 +1094,7 @@ class _BlocoSatelite extends StatelessWidget {
       case null:
       case SituacaoSatelite.carregando:
         corpo = [
-          Text('Carregando a última passagem do satélite…',
-              style: t.bodySmall)
+          Text('Carregando a última passagem do satélite…', style: t.bodySmall)
         ];
       case SituacaoSatelite.erro:
         corpo = [
@@ -1178,4 +1242,3 @@ class _LegendaSatelite extends StatelessWidget {
     );
   }
 }
-

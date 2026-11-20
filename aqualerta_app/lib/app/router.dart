@@ -94,11 +94,11 @@ class _Abas extends StatelessWidget {
           NavigationDestination(
             icon: Badge(
                 isLabelVisible: ativos > 0,
-                label: Text('$ativos'),
+                label: _NumeroQuePulsa(ativos),
                 child: const Icon(Icons.notifications_outlined)),
             selectedIcon: Badge(
                 isLabelVisible: ativos > 0,
-                label: Text('$ativos'),
+                label: _NumeroQuePulsa(ativos),
                 child: const Icon(Icons.notifications)),
             label: 'Alertas',
             tooltip: ativos > 0 ? 'Alertas: $ativos ativos' : 'Alertas',
@@ -111,6 +111,28 @@ class _Abas extends StatelessWidget {
               label: 'Perfil'),
         ],
       ),
+    );
+  }
+}
+
+/// Número de alertas ativos: quando muda, cresce para 1,2x e volta em
+/// 150 ms, para chamar o olho sem alarde.
+class _NumeroQuePulsa extends StatelessWidget {
+  const _NumeroQuePulsa(this.n);
+  final int n;
+
+  @override
+  Widget build(BuildContext context) {
+    return TweenAnimationBuilder<double>(
+      key: ValueKey(n),
+      tween: Tween(begin: 1.2, end: 1),
+      duration: MediaQuery.disableAnimationsOf(context)
+          ? Duration.zero
+          : const Duration(milliseconds: 150),
+      curve: Curves.easeOut,
+      builder: (_, escala, filho) =>
+          Transform.scale(scale: escala, child: filho),
+      child: Text('$n'),
     );
   }
 }
