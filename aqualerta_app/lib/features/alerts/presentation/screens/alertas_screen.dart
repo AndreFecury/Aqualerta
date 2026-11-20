@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:aqualerta/app/router.dart' show Abas;
 import 'package:aqualerta/core/domain/carta.dart';
 import 'package:aqualerta/core/state/painel_cubit.dart';
 import 'package:aqualerta/core/utils/formato.dart';
@@ -66,7 +67,7 @@ class AlertasScreen extends StatelessWidget {
                                 style: t.bodyMedium),
                           ),
                           TextButton(
-                              onPressed: () => context.go('/perfil'),
+                              onPressed: () => Abas.irPara(context, 3),
                               child: const Text('Alterar')),
                         ],
                       ),
@@ -116,7 +117,20 @@ class _Lista extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (carregando) return const Center(child: CircularProgressIndicator());
+    // Carregando → lista: troca com fade curto em vez de pular.
+    return AnimatedSwitcher(
+      duration: MediaQuery.disableAnimationsOf(context)
+          ? Duration.zero
+          : const Duration(milliseconds: 200),
+      child: carregando
+          ? const Center(
+              key: ValueKey('carregando'), child: CircularProgressIndicator())
+          : KeyedSubtree(
+              key: const ValueKey('lista'), child: _conteudo(context)),
+    );
+  }
+
+  Widget _conteudo(BuildContext context) {
     final novos = <String>{};
     if (destacarNovos) {
       if (_vistos == null) {

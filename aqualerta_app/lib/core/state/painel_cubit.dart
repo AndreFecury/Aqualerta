@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'package:equatable/equatable.dart';
+import 'package:aqualerta/features/map/presentation/cubit/camadas_cubit.dart'
+    show InicioMapa;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:aqualerta/core/data/carta_datasource.dart';
@@ -73,10 +75,39 @@ class Painel extends Equatable {
   /// A região mostrada no topo do mapa: a primeira que o usuário segue; se ele
   /// não segue nenhuma, a de maior risco agora. Empate (por exemplo, todos
   /// os rios baixos) fica com Manaus, onde o app abre.
+  /// Seguida primeiro; senão, a de maior risco.
   Regiao? get regiaoPrincipal {
     for (final r in regioes) {
       if (seguidas.contains(r.id)) return r;
     }
+    return regiaoDeMaiorRisco;
+  }
+
+  /// Região que o mapa mostra ao abrir, conforme a escolha no Perfil.
+  /// Padrão: Manaus. Sem a região escolhida, cai na próxima opção.
+  Regiao? regiaoInicial(InicioMapa modo) {
+    Regiao? manaus;
+    for (final r in regioes) {
+      if (_ehManaus(r)) {
+        manaus = r;
+        break;
+      }
+    }
+    switch (modo) {
+      case InicioMapa.manaus:
+        return manaus ?? regiaoDeMaiorRisco;
+      case InicioMapa.seguida:
+        for (final r in regioes) {
+          if (seguidas.contains(r.id)) return r;
+        }
+        return manaus ?? regiaoDeMaiorRisco;
+      case InicioMapa.maiorRisco:
+        return regiaoDeMaiorRisco;
+    }
+  }
+
+  /// A de maior risco agora (empate: Manaus primeiro).
+  Regiao? get regiaoDeMaiorRisco {
     Regiao? pior;
     for (final r in regioes) {
       if (pior == null) {

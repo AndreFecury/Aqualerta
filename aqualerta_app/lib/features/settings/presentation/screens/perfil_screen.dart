@@ -8,6 +8,7 @@ import 'package:aqualerta/core/auth/login_google.dart';
 import 'package:aqualerta/core/domain/severidade.dart';
 import 'package:aqualerta/core/notificacoes/avisos_service.dart';
 import 'package:aqualerta/core/state/painel_cubit.dart';
+import 'package:aqualerta/features/map/presentation/cubit/camadas_cubit.dart';
 import 'package:aqualerta/features/settings/presentation/cubit/aparencia_cubit.dart';
 import 'package:aqualerta/features/settings/presentation/cubit/notificacoes_cubit.dart';
 import 'package:aqualerta/shared/theme/aqua_colors.dart';
@@ -29,6 +30,7 @@ class PerfilScreen extends StatelessWidget {
     final aparencia = context.watch<AparenciaCubit>().state;
     final avisos = context.watch<NotificacoesCubit>().state;
     final painel = context.watch<PainelCubit>().state;
+    final mapa = context.watch<CamadasCubit>().state;
     final c = AquaColors.of(context);
     final t = Theme.of(context).textTheme;
     final email = _emailAtual();
@@ -148,6 +150,32 @@ class PerfilScreen extends StatelessWidget {
                       : painel.seguidas.length == 1
                           ? 'Vale para a região que você segue.'
                           : 'Vale para as ${painel.seguidas.length} regiões que você segue.',
+                  style: t.bodySmall,
+                ),
+                const SizedBox(height: 28),
+                const TituloSecao('Mapa'),
+                Text('Abrir o mapa em', style: t.titleSmall),
+                const SizedBox(height: 8),
+                SegmentedButton<InicioMapa>(
+                  key: const Key('inicio-mapa'),
+                  showSelectedIcon: false,
+                  segments: [
+                    for (final i in InicioMapa.values)
+                      ButtonSegment(value: i, label: Text(i.rotulo)),
+                  ],
+                  selected: {mapa.inicio},
+                  onSelectionChanged: (s) =>
+                      context.read<CamadasCubit>().escolherInicio(s.first),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  switch (mapa.inicio) {
+                    InicioMapa.manaus => 'O mapa sempre abre em Manaus.',
+                    InicioMapa.seguida =>
+                      'Abre na primeira região que você segue (ou em Manaus).',
+                    InicioMapa.maiorRisco =>
+                      'Abre onde o risco estiver mais alto agora.',
+                  },
                   style: t.bodySmall,
                 ),
                 const SizedBox(height: 28),

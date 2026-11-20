@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:aqualerta/app/voltar.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:aqualerta/core/atualizacao/aviso_atualizacao.dart';
@@ -40,12 +42,10 @@ final router = GoRouter(
       routes: [
         GoRoute(
             path: '/map',
-            pageBuilder: (_, __) =>
-                const NoTransitionPage(child: MapaScreen())),
+            pageBuilder: (_, s) => _paginaDeAba(s, const MapaScreen())),
         GoRoute(
           path: '/alerts',
-          pageBuilder: (_, __) =>
-              const NoTransitionPage(child: AlertasScreen()),
+          pageBuilder: (_, s) => _paginaDeAba(s, const AlertasScreen()),
           routes: [
             GoRoute(
                 path: ':id',
@@ -55,12 +55,10 @@ final router = GoRouter(
         ),
         GoRoute(
             path: '/rios',
-            pageBuilder: (_, __) =>
-                const NoTransitionPage(child: RiosScreen())),
+            pageBuilder: (_, s) => _paginaDeAba(s, const RiosScreen())),
         GoRoute(
             path: '/perfil',
-            pageBuilder: (_, __) =>
-                const NoTransitionPage(child: PerfilScreen())),
+            pageBuilder: (_, s) => _paginaDeAba(s, const PerfilScreen())),
         // Endereços antigos continuam funcionando.
         GoRoute(path: '/regions', redirect: (_, __) => '/rios'),
         GoRoute(path: '/settings', redirect: (_, __) => '/perfil'),
@@ -69,55 +67,132 @@ final router = GoRouter(
   ],
 );
 
+/// Troca de aba: a tela nova entra deslizando um pouco (6% da largura) do
+/// lado da aba tocada, com fade, em 240 ms; a antiga some em 120 ms. Curto
+/// de propósito: as abas são o que mais se usa no app. Sem movimento quando
+/// o celular pede para reduzir animações.
+CustomTransitionPage<void> _paginaDeAba(GoRouterState s, Widget tela) =>
+    CustomTransitionPage<void>(
+      key: s.pageKey,
+      child: tela,
+      transitionDuration: const Duration(milliseconds: 240),
+      reverseTransitionDuration: const Duration(milliseconds: 120),
+      transitionsBuilder: (context, animacao, _, filho) {
+        if (MediaQuery.disableAnimationsOf(context)) return filho;
+        final curva = CurvedAnimation(
+            parent: animacao,
+            curve: const Cubic(0.16, 1, 0.3, 1),
+            reverseCurve: Curves.easeIn);
+        return FadeTransition(
+          opacity: curva,
+          child: SlideTransition(
+            position:
+                Tween(begin: Offset(0.06 * Abas.direcao, 0), end: Offset.zero)
+                    .animate(curva),
+            child: filho,
+          ),
+        );
+      },
+    );
+
+/// Rotas das abas, na ordem do menu de baixo.
+const rotasDasAbas = ['/map', '/alerts', '/rios', '/perfil'];
+
+int indiceDaAba(String caminho) => rotasDasAbas
+    .indexWhere(caminho.startsWith)
+    .clamp(0, rotasDasAbas.length - 1);
+
+class Abas {
+  Abas._();
+
+  /// 1 = a aba nova está à direita da anterior; -1 = à esquerda.
+  static double direcao = 1;
+
+  static void irPara(BuildContext context, int destino) {
+    final atual = indiceDaAba(GoRouterState.of(context).uri.path);
+    if (destino == atual) return;
+    direcao = destino > atual ? 1 : -1;
+    context.go(rotasDasAbas[destino]);
+  }
+}
+
 class _Abas extends StatelessWidget {
   const _Abas({required this.child});
   final Widget child;
 
-  static const _rotas = ['/map', '/alerts', '/rios', '/perfil'];
+  static DateTime? _ultimoVoltar;
+
+  /// Ordem do voltar: a tela desfaz o que puder; fora do Mapa, volta ao
+  /// Mapa; no Mapa, pede um segundo toque para sair (em até 2 s).
+  static void _voltar(BuildContext context, int indice) {
+    if (Voltar.tratar()) return;
+    if (indice != 0) {
+      Abas.irPara(context, 0);
+      return;
+    }
+    final agora = DateTime.now();
+    if (_ultimoVoltar != null &&
+        agora.difference(_ultimoVoltar!) < const Duration(seconds: 2)) {
+      SystemNavigator.pop();
+      return;
+    }
+    _ultimoVoltar = agora;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(const SnackBar(
+        content: Text('Toque em voltar de novo para sair'),
+        duration: Duration(seconds: 2),
+      ));
+  }
 
   @override
   Widget build(BuildContext context) {
     final local = GoRouterState.of(context).uri.path;
-    final indice =
-        _rotas.indexWhere(local.startsWith).clamp(0, _rotas.length - 1);
+    final indice = indiceDaAba(local);
     final ativos =
         context.select<PainelCubit, int>((c) => c.state.ativos.length);
 
-    return Scaffold(
-      body: child,
-      bottomNavigationBar: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const AvisoAtualizacao(),
-          NavigationBar(
-            selectedIndex: indice,
-            onDestinationSelected: (i) => context.go(_rotas[i]),
-            destinations: [
-              const NavigationDestination(
-                  icon: Icon(Icons.map_outlined),
-                  selectedIcon: Icon(Icons.map),
-                  label: 'Mapa'),
-              NavigationDestination(
-                icon: Badge(
-                    isLabelVisible: ativos > 0,
-                    label: _NumeroQuePulsa(ativos),
-                    child: const Icon(Icons.notifications_outlined)),
-                selectedIcon: Badge(
-                    isLabelVisible: ativos > 0,
-                    label: _NumeroQuePulsa(ativos),
-                    child: const Icon(Icons.notifications)),
-                label: 'Alertas',
-                tooltip: ativos > 0 ? 'Alertas: $ativos ativos' : 'Alertas',
-              ),
-              const NavigationDestination(
-                  icon: Icon(Icons.straighten), label: 'Rios'),
-              const NavigationDestination(
-                  icon: Icon(Icons.person_outline),
-                  selectedIcon: Icon(Icons.person),
-                  label: 'Perfil'),
-            ],
-          ),
-        ],
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (saiu, _) {
+        if (!saiu) _voltar(context, indice);
+      },
+      child: Scaffold(
+        body: child,
+        bottomNavigationBar: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const AvisoAtualizacao(),
+            NavigationBar(
+              selectedIndex: indice,
+              onDestinationSelected: (i) => Abas.irPara(context, i),
+              destinations: [
+                const NavigationDestination(
+                    icon: Icon(Icons.map_outlined),
+                    selectedIcon: Icon(Icons.map),
+                    label: 'Mapa'),
+                NavigationDestination(
+                  icon: Badge(
+                      isLabelVisible: ativos > 0,
+                      label: _NumeroQuePulsa(ativos),
+                      child: const Icon(Icons.notifications_outlined)),
+                  selectedIcon: Badge(
+                      isLabelVisible: ativos > 0,
+                      label: _NumeroQuePulsa(ativos),
+                      child: const Icon(Icons.notifications)),
+                  label: 'Alertas',
+                  tooltip: ativos > 0 ? 'Alertas: $ativos ativos' : 'Alertas',
+                ),
+                const NavigationDestination(
+                    icon: Icon(Icons.straighten), label: 'Rios'),
+                const NavigationDestination(
+                    icon: Icon(Icons.person_outline),
+                    selectedIcon: Icon(Icons.person),
+                    label: 'Perfil'),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

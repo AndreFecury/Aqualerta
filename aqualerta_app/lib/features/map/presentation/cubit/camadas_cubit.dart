@@ -31,8 +31,19 @@ enum Camada {
   final String descricao;
 }
 
+/// Onde o mapa abre.
+enum InicioMapa {
+  manaus('Manaus'),
+  seguida('Região que sigo'),
+  maiorRisco('Maior risco');
+
+  const InicioMapa(this.rotulo);
+  final String rotulo;
+}
+
 class ExibicaoMapa extends Equatable {
   const ExibicaoMapa({
+    this.inicio = InicioMapa.manaus,
     this.tipo = TipoMapa.automatico,
     this.camadas = const {
       Camada.areasAlagadas,
@@ -44,11 +55,19 @@ class ExibicaoMapa extends Equatable {
 
   final TipoMapa tipo;
   final Set<Camada> camadas;
+  final InicioMapa inicio;
 
   bool mostra(Camada c) => camadas.contains(c);
 
+  ExibicaoMapa copyWith(
+          {TipoMapa? tipo, Set<Camada>? camadas, InicioMapa? inicio}) =>
+      ExibicaoMapa(
+          tipo: tipo ?? this.tipo,
+          camadas: camadas ?? this.camadas,
+          inicio: inicio ?? this.inicio);
+
   @override
-  List<Object?> get props => [tipo, camadas];
+  List<Object?> get props => [tipo, camadas, inicio];
 }
 
 /// Tipo de mapa e camadas, salvos no aparelho.
@@ -58,12 +77,17 @@ class CamadasCubit extends Cubit<ExibicaoMapa> {
   final SharedPreferences _prefs;
   static const _kTipo = 'mapa.tipo';
   static const _kCamadas = 'mapa.camadas';
+  static const _kInicio = 'mapa.inicio';
 
   static ExibicaoMapa _ler(SharedPreferences p) {
     final tipo =
         TipoMapa.values.where((t) => t.name == p.getString(_kTipo)).firstOrNull;
     final nomes = p.getStringList(_kCamadas);
+    final inicio = InicioMapa.values
+        .where((i) => i.name == p.getString(_kInicio))
+        .firstOrNull;
     return ExibicaoMapa(
+      inicio: inicio ?? InicioMapa.manaus,
       tipo: tipo ?? TipoMapa.automatico,
       camadas: nomes == null
           ? const ExibicaoMapa().camadas
@@ -75,14 +99,19 @@ class CamadasCubit extends Cubit<ExibicaoMapa> {
   }
 
   Future<void> escolherTipo(TipoMapa tipo) async {
-    emit(ExibicaoMapa(tipo: tipo, camadas: state.camadas));
+    emit(state.copyWith(tipo: tipo));
     await _prefs.setString(_kTipo, tipo.name);
+  }
+
+  Future<void> escolherInicio(InicioMapa inicio) async {
+    emit(state.copyWith(inicio: inicio));
+    await _prefs.setString(_kInicio, inicio.name);
   }
 
   Future<void> alternar(Camada camada) async {
     final novas = {...state.camadas};
     novas.contains(camada) ? novas.remove(camada) : novas.add(camada);
-    emit(ExibicaoMapa(tipo: state.tipo, camadas: novas));
+    emit(state.copyWith(camadas: novas));
     await _prefs.setStringList(_kCamadas, [for (final c in novas) c.name]);
   }
 }

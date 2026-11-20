@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:aqualerta/app/voltar.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
@@ -43,6 +44,7 @@ class _MapaScreenState extends State<MapaScreen>
     with SingleTickerProviderStateMixin {
   final _mapa = MapController();
   final _busca = TextEditingController();
+  final _folha = DraggableScrollableController();
   String? _regiaoSelecionadaId;
   LatLng? _minhaPosicao;
   double _alturaMapa = 800;
@@ -171,11 +173,44 @@ class _MapaScreenState extends State<MapaScreen>
     super.initState();
     // A chave do MapTiler chega do Supabase depois do login: redesenha.
     FundoMapa.chaveRemota.addListener(_chaveChegou);
+    Voltar.registrar(_voltar);
+  }
+
+  /// Botão voltar no Mapa: fecha a busca, recolhe o cartão e volta para a
+  /// região inicial, nessa ordem. Nada a desfazer: deixa o app decidir.
+  bool _voltar() {
+    if (!mounted) return false;
+    final foco = FocusManager.instance.primaryFocus;
+    final buscando = foco != null &&
+        foco.hasPrimaryFocus &&
+        foco.context?.findAncestorWidgetOfExactType<TextField>() != null;
+    if (_busca.text.isNotEmpty || buscando) {
+      _busca.clear();
+      foco?.unfocus();
+      return true;
+    }
+    if (_folha.isAttached && _folha.size > 0.36) {
+      _folha.animateTo(0.34,
+          duration: const Duration(milliseconds: 200), curve: Curves.easeOut);
+      return true;
+    }
+    if (_regiaoSelecionadaId != null) {
+      final inicial = context
+          .read<PainelCubit>()
+          .state
+          .regiaoInicial(context.read<CamadasCubit>().state.inicio);
+      if (inicial != null) _selecionar(inicial);
+      setState(() => _regiaoSelecionadaId = null);
+      return true;
+    }
+    return false;
   }
 
   @override
   void dispose() {
     FundoMapa.chaveRemota.removeListener(_chaveChegou);
+    Voltar.remover(_voltar);
+    _folha.dispose();
     _reavaliar?.cancel();
     _fimAvisoReserva?.cancel();
     _fimReserva?.cancel();
@@ -244,7 +279,7 @@ class _MapaScreenState extends State<MapaScreen>
     final regiao = (_regiaoSelecionadaId != null
             ? painel.regiao(_regiaoSelecionadaId!)
             : null) ??
-        painel.regiaoPrincipal;
+        painel.regiaoInicial(exibicao.inicio);
     final estacao = painel.estacaoDaRegiao(regiao);
 
     // Água por satélite: busca a região mostrada quando a camada está ligada.
@@ -610,7 +645,10 @@ class _MapaScreenState extends State<MapaScreen>
                         ),
                         // Cartão que sobe e desce
                         _FolhaRegiao(
-                            painel: painel, regiao: regiao, estacao: estacao),
+                            controle: _folha,
+                            painel: painel,
+                            regiao: regiao,
+                            estacao: estacao),
                       ],
                     )),
           ),
@@ -799,7 +837,11 @@ class _MarcaEstacao extends StatelessWidget {
 /// as cotas e as ações.
 class _FolhaRegiao extends StatelessWidget {
   const _FolhaRegiao(
-      {required this.painel, required this.regiao, required this.estacao});
+      {required this.controle,
+      required this.painel,
+      required this.regiao,
+      required this.estacao});
+  final DraggableScrollableController controle;
   final Painel painel;
   final Regiao? regiao;
   final Estacao? estacao;
@@ -810,6 +852,7 @@ class _FolhaRegiao extends StatelessWidget {
     final t = Theme.of(context).textTheme;
 
     return DraggableScrollableSheet(
+      controller: controle,
       initialChildSize: 0.34,
       minChildSize: _alturaMinima,
       maxChildSize: 0.86,
@@ -942,10 +985,12 @@ class _FolhaRegiao extends StatelessWidget {
                   severidade: severidade, mostrarAcao: true, grande: true)),
           Flexible(
             child: Text(
-                painel.principalEhSeguida ||
-                        regiao!.id != painel.regiaoPrincipal?.id
-                    ? regiao!.nome
-                    : 'Maior risco agora',
+                // Destaca quando a região mostrada é a de maior risco e há
+                // algum risco de fato; senão, só o nome.
+                regiao!.id == painel.regiaoDeMaiorRisco?.id &&
+                        severidade.index > 0
+                    ? 'Maior risco agora'
+                    : regiao!.nome,
                 style: t.bodySmall,
                 textAlign: TextAlign.end),
           ),
