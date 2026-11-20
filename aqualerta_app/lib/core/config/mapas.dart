@@ -6,8 +6,10 @@ import 'package:aqualerta/features/map/presentation/cubit/camadas_cubit.dart';
 /// Sem chave, o app usa serviços gratuitos que não exigem cadastro:
 /// CARTO (carta, ruas e nomes), OpenTopoMap (terreno) e
 /// EOX Sentinel-2 cloudless (satélite, CC BY-NC-SA 4.0).
-/// Com a chave do MapTiler (`--dart-define=MAPTILER_KEY=...`), os mesmos
-/// tipos passam a vir dele, com mais detalhe e sem limite de uso informal.
+/// Com a chave do MapTiler, os mesmos tipos passam a vir dele, com mais
+/// detalhe. A chave NÃO vai dentro da APK (a APK é pública no site): o app
+/// a recebe do Supabase depois do login ([ChaveMapa]). Builds locais ainda
+/// aceitam `--dart-define=MAPTILER_KEY=...`.
 ///
 /// Não use tile.openstreetmap.org: a política dos servidores do OSM não
 /// permite que aplicativos dependam deles.
@@ -35,7 +37,14 @@ class FundoMapa {
   /// Só para testes: finge que o app foi compilado com uma chave.
   @visibleForTesting
   static String? chaveDeTeste;
-  static String get _chave => chaveDeTeste ?? _chaveDoBuild;
+
+  /// Chave recebida do Supabase depois do login (e guardada no aparelho).
+  static final chaveRemota = ValueNotifier<String?>(null);
+  static String get _chave {
+    final remota = chaveRemota.value;
+    return chaveDeTeste ??
+        (remota != null && remota.isNotEmpty ? remota : _chaveDoBuild);
+  }
 
   /// Desliga o mapa de fundo (usado nos testes, que não têm internet).
   static bool desligado = false;

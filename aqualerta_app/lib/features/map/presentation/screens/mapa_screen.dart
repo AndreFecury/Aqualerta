@@ -162,8 +162,20 @@ class _MapaScreenState extends State<MapaScreen>
     _voar(enquadrado.center, enquadrado.zoom);
   }
 
+  void _chaveChegou() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    // A chave do MapTiler chega do Supabase depois do login: redesenha.
+    FundoMapa.chaveRemota.addListener(_chaveChegou);
+  }
+
   @override
   void dispose() {
+    FundoMapa.chaveRemota.removeListener(_chaveChegou);
     _reavaliar?.cancel();
     _fimAvisoReserva?.cancel();
     _fimReserva?.cancel();

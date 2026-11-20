@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:aqualerta/core/atualizacao/aviso_atualizacao.dart';
+import 'package:aqualerta/core/config/chave_mapa.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:aqualerta/core/data/carta_datasource.dart';
 import 'package:aqualerta/core/notificacoes/avisos_service.dart';
@@ -156,6 +157,13 @@ class _OuvinteAvisos extends StatefulWidget {
 
 class _OuvinteAvisosState extends State<_OuvinteAvisos> {
   Set<String>? _vistos;
+
+  @override
+  void initState() {
+    super.initState();
+    // Já logado: busca a chave do mapa (não vem dentro da APK).
+    ChaveMapa.carregar();
+  }
 
   @override
   Widget build(BuildContext context) {
