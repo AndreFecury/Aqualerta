@@ -1,0 +1,9 @@
+{
+  "codigo": 50,
+  "versao": "4.9.1",
+  "apk": "https://andrefecury.github.io/Aqualerta/app/aqualerta.apk?v=50",
+  "sha256": "5d66da528ba14afcc2591abac6b79c1d96606bb22f506a432ef65aa1cd36734f",
+  "tamanho": 59567075,
+  "notas": "Carregamento no formato das telas, abertura do alerta no padrão do Android e aviso visual de senha errada",
+  "publicadoEm": "2026-11-21T20:25:22Z"
+}
