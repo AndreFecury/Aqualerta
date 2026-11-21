@@ -96,13 +96,13 @@ SELECT pg_temp.confere(NOT EXISTS (SELECT 1 FROM public.chuva_leituras_10min WHE
 SELECT pg_temp.confere((SELECT count(*) FROM public.chuva_leituras_10min WHERE estacao_id = 9711) = 3, 'estação seca gravada');
 SELECT pg_temp.confere((SELECT mm_1h FROM public.chuva_avaliar() WHERE estacao_id = 9707) = 34,
                        'soma móvel de 60 min = 34 mm (ancorada na última leitura)');
-SELECT pg_temp.confere((SELECT severidade FROM public.chuva_avaliar() WHERE estacao_id = 9707) = 'HIGH',
-                       '34 mm/h = nível alto');
-SELECT pg_temp.confere(EXISTS (SELECT 1 FROM public.alerts WHERE status = 'ACTIVE' AND severity = 'HIGH'
+SELECT pg_temp.confere((SELECT severidade FROM public.chuva_avaliar() WHERE estacao_id = 9707) = 'MEDIUM',
+                       '34 mm/h num pluviômetro só = nível médio (calibração 21/11)');
+SELECT pg_temp.confere(EXISTS (SELECT 1 FROM public.alerts WHERE status = 'ACTIVE' AND severity = 'MEDIUM'
                                  AND metadata->>'origem' = 'chuva-cemaden'
                                  AND region_id = 'a0000000-0000-0000-0000-000000000001'
                                  AND body LIKE '%Tarumã%34 mm na última hora%'),
-                       'aviso de chuva muito forte em Manaus, citando o Tarumã');
+                       'aviso de chuva forte em Manaus, citando o Tarumã');
 SELECT pg_temp.confere((SELECT ped_ultima_ok IS NOT NULL AND ped_erro IS NULL FROM public.chuva_estado), 'estado da PED ok');
 SELECT pg_temp.confere(NOT EXISTS (SELECT 1 FROM public.chuva_pedidos), 'fila vazia');
 

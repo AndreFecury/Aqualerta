@@ -1,7 +1,8 @@
--- Teste da regra de avisos de chuva (supabase/migrations/20261119_chuva.sql).
+-- Teste da regra de avisos de chuva (supabase/migrations/20261119_chuva.sql,
+-- limites calibrados em 20261121_chuva_calibracao.sql).
 -- Roda só num PostGIS LOCAL de teste, depois de supabase/tests/stub_base.sql
--- e da migração. Os milímetros abaixo são cenários de teste, não dados reais.
---   psql -v ON_ERROR_STOP=1 -f stub_base.sql -f ../migrations/20261119_chuva.sql -f chuva_test.sql
+-- e das migrações de chuva. Os milímetros abaixo são cenários de teste.
+--   psql -v ON_ERROR_STOP=1 -f stub_base.sql -f ../migrations/20261119_chuva.sql --        -f ../migrations/20261119b_chuva_pgnet.sql -f ../migrations/20261119c_chuva_ped.sql --        -f ../migrations/20261121_chuva_calibracao.sql -f chuva_test.sql
 \set ON_ERROR_STOP 1
 BEGIN;
 
@@ -49,8 +50,12 @@ SELECT pg_temp.confere((pg_temp.aviso('a0000000-0000-0000-0000-000000000001')).t
 SELECT pg_temp.confere((pg_temp.aviso('a0000000-0000-0000-0000-000000000001')).body LIKE 'O pluviômetro Colônia Antônio Aleixo (CEMADEN) registrou 25 mm na última hora e 25 mm em 24 h (leitura das 15:20).%', 'texto com estação, mm e hora de Manaus');
 SELECT pg_temp.confere((pg_temp.aviso('a0000000-0000-0000-0000-000000000001')).flood_event_id IS NULL, 'aviso de chuva não inventa área alagada');
 
--- 3. Outra estação passa de 30 mm: sobe para laranja (HIGH), mesmo alerta.
+-- 3. Um pluviômetro só com 34,5 mm: segue amarelo (comum em Manaus).
 SELECT pg_temp.chuva(6741, '2026-11-19 19:00+00', 34.5);
+SELECT pg_temp.confere(pg_temp.avisos() = 0, 'um pluviômetro com 34,5 mm não sobe o nível');
+SELECT pg_temp.confere((pg_temp.aviso('a0000000-0000-0000-0000-000000000001')).severity = 'MEDIUM', 'segue MEDIUM');
+--    Outro pluviômetro do município também passa de 30 mm: laranja (HIGH), mesmo alerta.
+SELECT pg_temp.chuva(6740, '2026-11-19 19:00+00', 31);
 SELECT pg_temp.confere(pg_temp.avisos() = 1, 'subida conta como mudança');
 SELECT pg_temp.confere((SELECT count(*) FROM public.alerts WHERE metadata->>'origem' = 'chuva-cemaden') = 1, 'continua um alerta só');
 SELECT pg_temp.confere((pg_temp.aviso('a0000000-0000-0000-0000-000000000001')).severity = 'HIGH', 'nível HIGH');
@@ -74,12 +79,12 @@ SELECT pg_temp.confere(pg_temp.avisos() = 1, 'mais de 2 h: encerra');
 SELECT pg_temp.confere((pg_temp.aviso('a0000000-0000-0000-0000-000000000001')).status = 'RESOLVED', 'status RESOLVED');
 SELECT pg_temp.confere((pg_temp.aviso('a0000000-0000-0000-0000-000000000001')).body LIKE '%Encerrado às 18:15: 2 h sem chuva forte%', 'motivo do encerramento');
 
--- 6. 24 h: 55 mm espalhados (nenhuma hora acima de 20) → laranja pelo acumulado.
+-- 6. 24 h: 55 mm espalhados (nenhuma hora acima de 20) → amarelo pelo acumulado.
 UPDATE relogio SET t = timestamptz '2026-11-20 12:10+00';
 SELECT pg_temp.chuva(7000, timestamptz '2026-11-20 00:00+00' + (h || ' hours')::interval, 4.6)
 FROM generate_series(0, 11) h;                       -- 12 × 4,6 = 55,2 mm
 SELECT pg_temp.confere(pg_temp.avisos() = 1, 'acumulado de 24 h gera aviso');
-SELECT pg_temp.confere((pg_temp.aviso('a0000000-0000-0000-0000-000000000002')).severity = 'HIGH', '55 mm/24 h = HIGH');
+SELECT pg_temp.confere((pg_temp.aviso('a0000000-0000-0000-0000-000000000002')).severity = 'MEDIUM', '55 mm/24 h = MEDIUM');
 
 -- 7. Dado velho não vira aviso (coleta parada há 1 h).
 UPDATE relogio SET t = timestamptz '2026-11-21 10:00+00';
