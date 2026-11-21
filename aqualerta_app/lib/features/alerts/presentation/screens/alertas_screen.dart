@@ -7,6 +7,7 @@ import 'package:aqualerta/core/state/painel_cubit.dart';
 import 'package:aqualerta/core/utils/formato.dart';
 import 'package:aqualerta/features/settings/presentation/cubit/notificacoes_cubit.dart';
 import 'package:aqualerta/shared/theme/aqua_colors.dart';
+import 'package:aqualerta/shared/widgets/esqueleto.dart';
 import 'package:aqualerta/shared/widgets/selo_severidade.dart';
 import 'package:aqualerta/shared/widgets/v3.dart';
 
@@ -117,14 +118,21 @@ class _Lista extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Carregando → lista: troca com fade curto em vez de pular.
+    // Primeira carga: esqueleto no formato das linhas; depois troca com fade
+    // curto para a lista (sem spinner no meio da tela).
     return AnimatedSwitcher(
       duration: MediaQuery.disableAnimationsOf(context)
           ? Duration.zero
-          : const Duration(milliseconds: 200),
+          : const Duration(milliseconds: 250),
+      switchInCurve: Curves.easeOut,
+      layoutBuilder: (atual, anteriores) => Stack(
+          alignment: Alignment.topCenter,
+          children: [...anteriores, if (atual != null) atual]),
       child: carregando
-          ? const Center(
-              key: ValueKey('carregando'), child: CircularProgressIndicator())
+          ? const Align(
+              key: ValueKey('carregando'),
+              alignment: Alignment.topCenter,
+              child: EsqueletoAlertas())
           : KeyedSubtree(
               key: const ValueKey('lista'), child: _conteudo(context)),
     );

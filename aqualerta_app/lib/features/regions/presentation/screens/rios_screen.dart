@@ -5,6 +5,7 @@ import 'package:aqualerta/core/domain/severidade.dart';
 import 'package:aqualerta/core/state/painel_cubit.dart';
 import 'package:aqualerta/core/utils/formato.dart';
 import 'package:aqualerta/shared/theme/aqua_colors.dart';
+import 'package:aqualerta/shared/widgets/esqueleto.dart';
 import 'package:aqualerta/shared/widgets/hachura.dart';
 import 'package:aqualerta/shared/widgets/regua.dart';
 import 'package:aqualerta/shared/widgets/v3.dart';
@@ -42,8 +43,6 @@ class RiosScreen extends StatelessWidget {
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
                 children: [
-                  if (painel.carregando && !painel.temDados)
-                    const LinearProgressIndicator(),
                   const _Legenda(),
                   if (!painel.carregando && estacoes.isEmpty)
                     const EstadoVazio(
@@ -52,8 +51,28 @@ class RiosScreen extends StatelessWidget {
                       texto:
                           'As leituras das estações ainda não chegaram. Puxe para baixo para tentar de novo.',
                     ),
-                  for (final (i, e) in estacoes.indexed)
-                    _LinhaEstacao(estacao: e, ultima: i == estacoes.length - 1),
+                  // Primeira carga: esqueleto das estações, que dá lugar às
+                  // leituras com um fade curto.
+                  AnimatedSwitcher(
+                    duration: MediaQuery.disableAnimationsOf(context)
+                        ? Duration.zero
+                        : const Duration(milliseconds: 250),
+                    switchInCurve: Curves.easeOut,
+                    layoutBuilder: (atual, anteriores) => Stack(
+                        alignment: Alignment.topCenter,
+                        children: [...anteriores, if (atual != null) atual]),
+                    child: painel.carregando && !painel.temDados
+                        ? const EsqueletoEstacoes(key: ValueKey('carregando'))
+                        : Column(
+                            key: const ValueKey('estacoes'),
+                            children: [
+                              for (final (i, e) in estacoes.indexed)
+                                _LinhaEstacao(
+                                    estacao: e,
+                                    ultima: i == estacoes.length - 1),
+                            ],
+                          ),
+                  ),
                   const SizedBox(height: 28),
                   const TituloSecao('Regiões que você segue'),
                   Text('Você recebe avisos das regiões marcadas.',

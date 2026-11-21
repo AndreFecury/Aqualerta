@@ -6,6 +6,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:aqualerta/core/config/mapas.dart';
+import 'package:aqualerta/shared/widgets/esqueleto.dart';
 import 'package:aqualerta/shared/widgets/logo_maptiler.dart';
 import 'package:aqualerta/core/domain/carta.dart';
 import 'package:aqualerta/core/state/painel_cubit.dart';
@@ -45,7 +46,7 @@ class _DetalheAlertaScreenState extends State<DetalheAlertaScreen> {
       return Scaffold(
         appBar: AppBar(title: const Text('Alerta')),
         body: painel.carregando
-            ? const Center(child: CircularProgressIndicator())
+            ? const SingleChildScrollView(child: EsqueletoAlertas(linhas: 1))
             : EstadoVazio(
                 icone: Icons.search_off,
                 titulo: 'Alerta não encontrado',

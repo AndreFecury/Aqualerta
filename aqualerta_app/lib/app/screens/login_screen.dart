@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:aqualerta/core/auth/login_google.dart';
 import 'package:aqualerta/shared/theme/aqua_colors.dart';
 import 'package:aqualerta/shared/widgets/logo_aqualerta.dart';
+import 'package:aqualerta/shared/widgets/tremor.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -21,6 +22,9 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _entrandoGoogle = false;
   bool _senhaVisivel = false;
   String? _erro;
+
+  /// Muda a cada e-mail/senha recusados: balança o campo de senha.
+  int _tremor = 0;
   String? _info;
 
   @override
@@ -51,7 +55,10 @@ class _LoginScreenState extends State<LoginScreen> {
             email: _email.text.trim(), password: _senha.text);
       }
     } on AuthException catch (e) {
-      setState(() => _erro = _traduzir(e));
+      setState(() {
+        _erro = _traduzir(e);
+        _tremor++;
+      });
     } catch (_) {
       setState(() => _erro =
           'Sem conexão com o servidor. Confira a internet e tente de novo.');
@@ -187,32 +194,34 @@ class _LoginScreenState extends State<LoginScreen> {
                           : null,
                     ),
                     const SizedBox(height: 14),
-                    TextFormField(
-                      controller: _senha,
-                      obscureText: !_senhaVisivel,
-                      autofillHints: [
-                        _criandoConta
-                            ? AutofillHints.newPassword
-                            : AutofillHints.password
-                      ],
-                      onFieldSubmitted: (_) => _enviar(),
-                      decoration: InputDecoration(
-                        labelText: 'Senha',
-                        suffixIcon: IconButton(
-                          tooltip: _senhaVisivel
-                              ? 'Esconder senha'
-                              : 'Mostrar senha',
-                          icon: Icon(_senhaVisivel
-                              ? Icons.visibility_off
-                              : Icons.visibility),
-                          onPressed: () =>
-                              setState(() => _senhaVisivel = !_senhaVisivel),
-                        ),
-                      ),
-                      validator: (v) => (v == null || v.length < 6)
-                          ? 'A senha precisa ter pelo menos 6 caracteres.'
-                          : null,
-                    ),
+                    Tremor(
+                        gatilho: _tremor,
+                        child: TextFormField(
+                          controller: _senha,
+                          obscureText: !_senhaVisivel,
+                          autofillHints: [
+                            _criandoConta
+                                ? AutofillHints.newPassword
+                                : AutofillHints.password
+                          ],
+                          onFieldSubmitted: (_) => _enviar(),
+                          decoration: InputDecoration(
+                            labelText: 'Senha',
+                            suffixIcon: IconButton(
+                              tooltip: _senhaVisivel
+                                  ? 'Esconder senha'
+                                  : 'Mostrar senha',
+                              icon: Icon(_senhaVisivel
+                                  ? Icons.visibility_off
+                                  : Icons.visibility),
+                              onPressed: () => setState(
+                                  () => _senhaVisivel = !_senhaVisivel),
+                            ),
+                          ),
+                          validator: (v) => (v == null || v.length < 6)
+                              ? 'A senha precisa ter pelo menos 6 caracteres.'
+                              : null,
+                        )),
                     if (_erro != null || _info != null) ...[
                       const SizedBox(height: 14),
                       Semantics(

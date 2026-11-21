@@ -47,6 +47,13 @@ abstract class AquaTheme {
       // Toques de no mínimo 48 px em todo controle.
       materialTapTargetSize: MaterialTapTargetSize.padded,
       visualDensity: VisualDensity.standard,
+      // Telas empilhadas (ex.: detalhe do alerta) no padrão do Android 14+:
+      // o "voltar preditivo" mostra a tela de trás acompanhando o dedo, e o
+      // abrir/fechar normal usa o fade-forward do Material 3 (o mesmo dos
+      // apps do Google).
+      pageTransitionsTheme: const PageTransitionsTheme(builders: {
+        TargetPlatform.android: PredictiveBackPageTransitionsBuilder(),
+      }),
 
       appBarTheme: AppBarTheme(
         backgroundColor: c.papel,
