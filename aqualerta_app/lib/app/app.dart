@@ -7,6 +7,7 @@ import 'package:aqualerta/core/atualizacao/atualizacao.dart';
 import 'package:aqualerta/shared/theme/aqua_theme.dart';
 import 'package:aqualerta/features/settings/presentation/cubit/aparencia_cubit.dart';
 import 'package:aqualerta/features/settings/presentation/cubit/notificacoes_cubit.dart';
+import 'package:aqualerta/features/map/data/ar_repository.dart';
 import 'package:aqualerta/features/map/data/satelite_repository.dart';
 import 'package:aqualerta/features/map/presentation/cubit/camadas_cubit.dart';
 import 'router.dart';
@@ -48,6 +49,7 @@ class _AqualertaAppState extends State<AqualertaApp> {
                 cliente: Supabase.instance.client)),
         BlocProvider(create: (_) => CamadasCubit(widget.preferencias)),
         BlocProvider(create: (_) => SateliteCubit(SateliteRepository())),
+        BlocProvider(create: (_) => ArCubit(ArRepository())),
         // Confere uma vez ao abrir se há versão nova do app.
         BlocProvider(create: (_) => AtualizacaoCubit()..verificar()),
       ],

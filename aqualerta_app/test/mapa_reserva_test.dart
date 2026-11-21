@@ -53,8 +53,8 @@ void main() {
 
       FundoMapa.tempoNaReserva = Duration.zero; // a reserva "venceu"
       expect(FundoMapa.usandoReserva, isFalse);
-      expect(FundoMapa.para(TipoMapa.carta, Brightness.light).ehMapTiler,
-          isTrue);
+      expect(
+          FundoMapa.para(TipoMapa.carta, Brightness.light).ehMapTiler, isTrue);
     });
   });
 
@@ -80,8 +80,7 @@ void main() {
   // Nos testes toda requisição de rede responde 400, então os tiles do
   // MapTiler falham de verdade: é a mesma situação da Wi-Fi que bloqueia
   // api.maptiler.com.
-  testWidgets('MapTiler falhando troca para o mapa gratuito',
-      (t) async {
+  testWidgets('MapTiler falhando troca para o mapa gratuito', (t) async {
     FundoMapa.chaveDeTeste = 'chave-teste';
     FundoMapa.desligado = false;
     await montar(t, const MapaScreen());

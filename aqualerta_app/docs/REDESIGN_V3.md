@@ -34,6 +34,7 @@ Sem leitura recente (até 48 h), vale a severidade gravada no alerta.
 | Cotas de alerta, inundação e inundação severa | SGB, Sistemas de Alerta Hidrológico (Amazonas, Madeira, Acre) | manual, quando o SGB revisar |
 | Regiões | Limites municipais do IBGE (malha 2022, qualidade intermediária) | manual |
 | Alertas | Gerados pelo banco quando o rio passa da cota de alerta; encerrados quando volta a baixar | a cada 30 min |
+| Qualidade do ar | Modelo CAMS/Copernicus via Open-Meteo (CC BY 4.0), índice IQAr do MMA (Res. Conama 506/2024); focos de queimada do INPE. Estimativa de modelo, não medição local. Avisos só a partir de "muito ruim" e nunca mudam o risco de cheia | de hora em hora, pelo próprio Supabase (pg_net + pg_cron) |
 
 Estações: Manaus (14990000, Rio Negro), Manacapuru (14100000, Solimões),
 Itacoatiara (16030000, Amazonas), Parintins (16350002, Amazonas), Porto Velho

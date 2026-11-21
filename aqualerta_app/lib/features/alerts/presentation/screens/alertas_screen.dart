@@ -7,7 +7,9 @@ import 'package:aqualerta/core/state/painel_cubit.dart';
 import 'package:aqualerta/core/utils/formato.dart';
 import 'package:aqualerta/features/settings/presentation/cubit/notificacoes_cubit.dart';
 import 'package:aqualerta/shared/theme/aqua_colors.dart';
+import 'package:aqualerta/core/domain/ar.dart';
 import 'package:aqualerta/shared/widgets/esqueleto.dart';
+import 'package:aqualerta/shared/widgets/selo_ar.dart';
 import 'package:aqualerta/shared/widgets/selo_severidade.dart';
 import 'package:aqualerta/shared/widgets/v3.dart';
 
@@ -191,7 +193,11 @@ class _LinhaAlerta extends StatelessWidget {
               : const Duration(milliseconds: 1500),
           curve: Curves.easeIn,
           builder: (context, v, filho) => Container(
-            color: c.corDe(alerta.severidade).withValues(alpha: 0.22 * v),
+            color: (alerta.ehAr
+                    ? NivelAr.doAviso(alerta.severidade)
+                        .cor(Theme.of(context).brightness)
+                    : c.corDe(alerta.severidade))
+                .withValues(alpha: 0.22 * v),
             child: filho,
           ),
           child: Container(
@@ -204,9 +210,11 @@ class _LinhaAlerta extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      SeloSeveridade(
-                          severidade: alerta.severidade,
-                          mostrarAcao: alerta.ativo),
+                      alerta.ehAr
+                          ? SeloAr(nivel: NivelAr.doAviso(alerta.severidade))
+                          : SeloSeveridade(
+                              severidade: alerta.severidade,
+                              mostrarAcao: alerta.ativo),
                       const SizedBox(height: 6),
                       Text(alerta.titulo, style: t.titleMedium),
                       const SizedBox(height: 2),

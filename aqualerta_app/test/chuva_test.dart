@@ -91,9 +91,13 @@ void main() {
     test('estado da coleta de chuva no Perfil', () {
       final agora = DateTime(2026, 11, 19, 12);
       expect(estadoChuva(null, agora: agora), 'Aguardando');
-      expect(estadoChuva(agora.subtract(const Duration(minutes: 12)), agora: agora),
+      expect(
+          estadoChuva(agora.subtract(const Duration(minutes: 12)),
+              agora: agora),
           'Ativa');
-      expect(estadoChuva(agora.subtract(const Duration(minutes: 45)), agora: agora),
+      expect(
+          estadoChuva(agora.subtract(const Duration(minutes: 45)),
+              agora: agora),
           'Atrasada');
     });
   });
@@ -101,7 +105,8 @@ void main() {
   group('telas', () {
     testWidgets('cartão do mapa mostra o aviso de chuva primeiro', (t) async {
       await montar(t, const MapaScreen(), dados: CartaComChuva());
-      expect(find.textContaining('chuva extrema nos pluviômetros'), findsOneWidget);
+      expect(find.textContaining('chuva extrema nos pluviômetros'),
+          findsOneWidget);
       // Selo do cartão no nível do aviso de chuva (crítico), não no do rio.
       expect(find.text(Severidade.critico.acao), findsWidgets);
     });
@@ -110,7 +115,8 @@ void main() {
       await montar(t, const DetalheAlertaScreen(alertaId: 'chuva1'),
           dados: CartaComChuva());
       expect(find.text('Aviso de chuva'), findsOneWidget);
-      expect(find.textContaining('não substitui a Defesa Civil'), findsOneWidget);
+      expect(
+          find.textContaining('não substitui a Defesa Civil'), findsOneWidget);
     });
 
     testWidgets('Perfil mostra o CEMADEN ativo com coleta recente', (t) async {

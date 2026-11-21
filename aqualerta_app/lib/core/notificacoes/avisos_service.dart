@@ -132,9 +132,14 @@ class AvisosService {
   /// Avisa sobre um alerta novo, respeitando as preferências.
   Future<void> avisar(AlertaV3 a, PreferenciasNotificacao prefs) async {
     if (!prefs.deveAvisar(a.severidade)) return;
+    if (a.ehAr && !prefs.ar) return;
     await _mostrar(
       a.id.hashCode,
-      '${a.severidade.acao}: risco ${a.severidade.rotulo.toLowerCase()}',
+      a.ehAr
+          ? (a.severidade == Severidade.critico
+              ? 'Ar péssimo: evite sair de casa'
+              : 'Ar muito ruim: proteja-se')
+          : '${a.severidade.acao}: risco ${a.severidade.rotulo.toLowerCase()}',
       '${a.titulo} - ${a.regiaoNome}',
       a.id,
       som: prefs.som && a.severidade >= Severidade.alto,

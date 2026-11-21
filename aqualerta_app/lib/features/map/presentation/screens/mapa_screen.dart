@@ -15,6 +15,7 @@ import 'package:aqualerta/core/domain/severidade.dart';
 import 'package:aqualerta/core/state/painel_cubit.dart';
 import 'package:aqualerta/core/utils/formato.dart';
 import 'package:aqualerta/features/map/presentation/cubit/camadas_cubit.dart';
+import 'package:aqualerta/features/map/presentation/widgets/bloco_ar.dart';
 import 'package:aqualerta/features/map/presentation/widgets/painel_exibicao.dart';
 import 'package:aqualerta/shared/theme/aqua_colors.dart';
 import 'package:aqualerta/shared/widgets/hachura.dart';
@@ -927,7 +928,9 @@ class _FolhaRegiao extends StatelessWidget {
 
   List<Widget> _conteudo(BuildContext context, AquaColors c, TextTheme t) {
     final severidade = painel.severidadeDaRegiao(regiao!.id);
-    final daRegiao = painel.ativos.where((a) => a.regiaoId == regiao!.id);
+    // O aviso de ar aparece no bloco "Qualidade do ar", não no de cheia.
+    final daRegiao =
+        painel.ativos.where((a) => a.regiaoId == regiao!.id && !a.ehAr);
     final chuva = daRegiao.where((a) => a.ehChuva).firstOrNull;
     // Aviso de chuva tem prioridade: é o que muda nos próximos minutos.
     final alerta = chuva ?? daRegiao.firstOrNull;
@@ -1061,6 +1064,8 @@ class _FolhaRegiao extends StatelessWidget {
         ),
       const SizedBox(height: 20),
       _BlocoSatelite(regiaoId: regiao!.id),
+      const SizedBox(height: 12),
+      BlocoAr(regiaoId: regiao!.id),
     ];
   }
 }

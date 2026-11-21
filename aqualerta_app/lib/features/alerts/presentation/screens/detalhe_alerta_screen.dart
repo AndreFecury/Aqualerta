@@ -6,7 +6,9 @@ import 'package:latlong2/latlong.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:aqualerta/core/config/mapas.dart';
+import 'package:aqualerta/core/domain/ar.dart';
 import 'package:aqualerta/shared/widgets/esqueleto.dart';
+import 'package:aqualerta/shared/widgets/selo_ar.dart';
 import 'package:aqualerta/shared/widgets/logo_maptiler.dart';
 import 'package:aqualerta/core/domain/carta.dart';
 import 'package:aqualerta/core/state/painel_cubit.dart';
@@ -22,6 +24,15 @@ const _acoes = [
   'Guarde documentos e remédios em saco plástico, num lugar alto.',
   'Se a água entrar em casa, desligue a energia no disjuntor.',
   'Combine com a família um lugar seguro para onde ir.',
+];
+
+/// Para avisos de qualidade do ar (fumaça e poluição).
+const _acoesAr = [
+  'Evite exercício e esforço ao ar livre, principalmente à tarde.',
+  'Feche portas e janelas nas horas de mais fumaça; se tiver ar-condicionado, use no modo de recircular.',
+  'Crianças, idosos, gestantes e quem tem asma ou doença do coração: fiquem em casa se puderem.',
+  'Se precisar sair, máscara PFF2 (N95) bem ajustada protege mais que máscara de pano.',
+  'Procure atendimento se tiver falta de ar, chiado ou dor no peito.',
 ];
 
 class DetalheAlertaScreen extends StatefulWidget {
@@ -69,11 +80,13 @@ class _DetalheAlertaScreenState extends State<DetalheAlertaScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(alerta.ehChuva
-            ? 'Aviso de chuva'
-            : estacao != null
-                ? 'Alerta do ${estacao.titulo}'
-                : 'Alerta'),
+        title: Text(alerta.ehAr
+            ? 'Aviso de qualidade do ar'
+            : alerta.ehChuva
+                ? 'Aviso de chuva'
+                : estacao != null
+                    ? 'Alerta do ${estacao.titulo}'
+                    : 'Alerta'),
         actions: [
           IconButton(
             tooltip: 'Compartilhar alerta',
@@ -102,14 +115,18 @@ class _DetalheAlertaScreenState extends State<DetalheAlertaScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    SeloSeveridade(severidade: alerta.severidade),
+                    alerta.ehAr
+                        ? SeloAr(nivel: NivelAr.doAviso(alerta.severidade))
+                        : SeloSeveridade(severidade: alerta.severidade),
                     const SizedBox(height: 8),
                     Semantics(
                         header: true,
                         child: Text(
-                            alerta.ativo
-                                ? alerta.severidade.acao
-                                : 'Alerta encerrado',
+                            !alerta.ativo
+                                ? 'Alerta encerrado'
+                                : alerta.ehAr
+                                    ? 'Proteja-se da fumaça e da poluição'
+                                    : alerta.severidade.acao,
                             style: t.headlineSmall)),
                     const SizedBox(height: 8),
                     Text(alerta.titulo, style: t.titleMedium),
@@ -173,15 +190,14 @@ class _DetalheAlertaScreenState extends State<DetalheAlertaScreen> {
           if (alerta.ativo) ...[
             const SizedBox(height: 28),
             const TituloSecao('O que fazer agora'),
-            for (var i = 0; i < _acoes.length; i++)
+            for (final (i, acao) in (alerta.ehAr ? _acoesAr : _acoes).indexed)
               CheckboxListTile(
                 contentPadding: EdgeInsets.zero,
                 controlAffinity: ListTileControlAffinity.leading,
                 value: _feitas.contains(i),
                 onChanged: (v) => setState(
                     () => v == true ? _feitas.add(i) : _feitas.remove(i)),
-                title:
-                    Text(_acoes[i], style: t.bodyLarge!.copyWith(fontSize: 16)),
+                title: Text(acao, style: t.bodyLarge!.copyWith(fontSize: 16)),
                 shape: Border(bottom: BorderSide(color: c.linha)),
               ),
           ],
@@ -193,7 +209,11 @@ class _DetalheAlertaScreenState extends State<DetalheAlertaScreen> {
               child: SizedBox(
                   height: 200,
                   child: _MiniCarta(
-                      contornos: contornos, cor: c.corDe(alerta.severidade))),
+                      contornos: contornos,
+                      cor: alerta.ehAr
+                          ? NivelAr.doAviso(alerta.severidade)
+                              .cor(Theme.of(context).brightness)
+                          : c.corDe(alerta.severidade))),
             ),
             const SizedBox(height: 6),
             Text(

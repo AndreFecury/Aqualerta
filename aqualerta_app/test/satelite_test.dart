@@ -105,8 +105,11 @@ void main() {
 
     test('região sem observação, lixo e anéis curtos', () {
       expect(
-          ObservacaoSatelite.doGeoJson(
-              {'type': 'FeatureCollection', 'observacao': null, 'features': []}),
+          ObservacaoSatelite.doGeoJson({
+            'type': 'FeatureCollection',
+            'observacao': null,
+            'features': []
+          }),
           isNull);
       expect(ObservacaoSatelite.doGeoJson(null), isNull);
       expect(ObservacaoSatelite.doGeoJson('x'), isNull);
@@ -121,7 +124,11 @@ void main() {
             ]
           }),
           isEmpty);
-      expect(areasDaGeometria({'type': 'Point', 'coordinates': [0, 0]}),
+      expect(
+          areasDaGeometria({
+            'type': 'Point',
+            'coordinates': [0, 0]
+          }),
           isEmpty);
     });
 
@@ -226,31 +233,31 @@ void main() {
     testWidgets('camada ligada desenha os polígonos e mostra a legenda',
         (t) async {
       final fonte = _FonteFalsa(() => _rpc(
-          observadoEm: DateTime.now()
-              .toUtc()
-              .subtract(const Duration(days: 2))
-              .toIso8601String(),
-          geometria: {
-            'type': 'MultiPolygon',
-            'coordinates': [
-              [_quadrado, _ilha],
-              [_ilha],
-            ]
-          }));
+              observadoEm: DateTime.now()
+                  .toUtc()
+                  .subtract(const Duration(days: 2))
+                  .toIso8601String(),
+              geometria: {
+                'type': 'MultiPolygon',
+                'coordinates': [
+                  [_quadrado, _ilha],
+                  [_ilha],
+                ]
+              }));
       await montar(t, const MapaScreen(), satelite: fonte, preferencias: {
         'mapa.camadas': ['regioes', 'aguaSatelite'],
       });
       await t.pump(const Duration(milliseconds: 100));
       await t.pump(const Duration(milliseconds: 100));
-      final camada = t.widget<PolygonLayer>(
-          find.byKey(const ValueKey('camada-satelite')));
+      final camada =
+          t.widget<PolygonLayer>(find.byKey(const ValueKey('camada-satelite')));
       expect(camada.polygons, hasLength(2));
       expect(camada.polygons.first.holePointsList, hasLength(1));
       expect(find.text('Água por satélite · há 2 dias'), findsOneWidget);
       expect(fonte.chamadas, 1);
 
       // O cartão traz o rótulo honesto, a fonte e as limitações.
-      await t.scrollUntilVisible(find.text('Limitações'), 200,
+      await t.scrollUntilVisible(find.text('Limitações').first, 200,
           scrollable: rolavelDoCartao());
       expect(find.text('Água aberta detectada por radar (Sentinel-1)'),
           findsOneWidget);
@@ -261,7 +268,8 @@ void main() {
 
     testWidgets('cartão mostra o estado vazio quando não há observação',
         (t) async {
-      await montar(t, const MapaScreen(), satelite: SateliteVazio(),
+      await montar(t, const MapaScreen(),
+          satelite: SateliteVazio(),
           preferencias: {
             'mapa.camadas': ['regioes', 'aguaSatelite'],
           });

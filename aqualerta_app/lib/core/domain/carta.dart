@@ -148,12 +148,18 @@ class AlertaV3 extends Equatable {
   bool get ehChuva => origem == origemChuva;
   static const origemChuva = 'chuva-cemaden';
 
+  /// Aviso de qualidade do ar (migração 20261122_ar.sql). Nunca entra no
+  /// risco de cheia da região.
+  bool get ehAr => origem == origemAr;
+  static const origemAr = 'ar-cams';
+
   /// Pelas cotas da estação quando há leitura recente; senão, a do alerta.
   Severidade get severidade => estacao?.severidade() ?? severidadeOriginal;
 
   /// Liga a estação do rio ao alerta, para a severidade seguir as cotas.
-  /// Aviso de chuva não tem nada a ver com o nível do rio: fica como veio.
-  AlertaV3 comEstacao(Estacao? e) => ehChuva
+  /// Aviso de chuva ou de ar não tem nada a ver com o nível do rio: fica
+  /// como veio.
+  AlertaV3 comEstacao(Estacao? e) => ehChuva || ehAr
       ? this
       : AlertaV3(
           id: id,

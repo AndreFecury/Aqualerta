@@ -8,6 +8,7 @@ import 'package:aqualerta/core/auth/login_google.dart';
 import 'package:aqualerta/core/domain/severidade.dart';
 import 'package:aqualerta/core/notificacoes/avisos_service.dart';
 import 'package:aqualerta/core/state/painel_cubit.dart';
+import 'package:aqualerta/features/map/data/ar_repository.dart';
 import 'package:aqualerta/features/map/presentation/cubit/camadas_cubit.dart';
 import 'package:aqualerta/features/settings/presentation/cubit/aparencia_cubit.dart';
 import 'package:aqualerta/features/settings/presentation/cubit/notificacoes_cubit.dart';
@@ -127,6 +128,19 @@ class PerfilScreen extends StatelessWidget {
                       ? context.read<NotificacoesCubit>().definirSom
                       : null,
                 ),
+                SwitchListTile(
+                  key: const Key('avisos-ar'),
+                  contentPadding: EdgeInsets.zero,
+                  title: Text('Qualidade do ar', style: t.titleSmall),
+                  subtitle: Text(
+                      'Avisar quando o ar ficar muito ruim ou péssimo '
+                      '(fumaça de queimadas). Não muda os avisos de cheia',
+                      style: t.bodySmall),
+                  value: avisos.ar,
+                  onChanged: avisos.ativas
+                      ? context.read<NotificacoesCubit>().definirAr
+                      : null,
+                ),
                 const SizedBox(height: 8),
                 Text('Avisar a partir de', style: t.titleSmall),
                 const SizedBox(height: 8),
@@ -202,6 +216,22 @@ class PerfilScreen extends StatelessWidget {
                     nome: 'Copernicus, água por satélite (Sentinel-1)',
                     estado: 'Ativa',
                     cor: c.textoDe(Severidade.baixo)),
+                Builder(builder: (context) {
+                  final ar = context.watch<ArCubit>();
+                  if (ar.vencido && ar.state.situacao != SituacaoAr.erro) {
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      if (context.mounted) context.read<ArCubit>().carregar();
+                    });
+                  }
+                  final coleta = ar.state.coletaEm;
+                  final estado = estadoAr(coleta);
+                  return _LinhaFonte(
+                      nome: 'Open-Meteo/CAMS e INPE, qualidade do ar (modelo)',
+                      estado: estado,
+                      cor: estado == 'Ativa'
+                          ? c.textoDe(Severidade.baixo)
+                          : c.tinta2);
+                }),
                 const SizedBox(height: 28),
                 OutlinedButton(
                   style: OutlinedButton.styleFrom(
@@ -332,6 +362,13 @@ class _LinhaFonte extends StatelessWidget {
 
 /// Estado da coleta de chuva para a lista de fontes: "Ativa" com coleta nos
 /// últimos 30 min, "Atrasada" se parou, "Aguardando" se ainda não começou.
+/// Coleta do ar é de hora em hora: até 3 h sem dado novo ainda é "Ativa".
+String estadoAr(DateTime? ultima, {DateTime? agora}) {
+  if (ultima == null) return 'Aguardando';
+  final h = (agora ?? DateTime.now()).difference(ultima);
+  return h <= const Duration(hours: 3) ? 'Ativa' : 'Atrasada';
+}
+
 String estadoChuva(DateTime? ultima, {DateTime? agora}) {
   if (ultima == null) return 'Aguardando';
   final idade = (agora ?? DateTime.now()).difference(ultima);

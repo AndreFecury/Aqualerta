@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:aqualerta/core/domain/ar.dart';
+import 'package:aqualerta/features/map/data/ar_repository.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -23,6 +25,7 @@ Future<void> montar(WidgetTester t, Widget tela,
     {ThemeData? tema,
     double escala = 1,
     FonteSatelite? satelite,
+    FonteAr? ar,
     Map<String, Object>? preferencias,
     CartaDatasource? dados}) async {
   SharedPreferences.setMockInitialValues(preferencias ?? {});
@@ -36,8 +39,8 @@ Future<void> montar(WidgetTester t, Widget tela,
         BlocProvider(create: (_) => AparenciaCubit(prefs)),
         BlocProvider(create: (_) => NotificacoesCubit(prefs)),
         BlocProvider(create: (_) => CamadasCubit(prefs)),
-        BlocProvider(
-            create: (_) => SateliteCubit(satelite ?? SateliteVazio())),
+        BlocProvider(create: (_) => SateliteCubit(satelite ?? SateliteVazio())),
+        BlocProvider(create: (_) => ArCubit(ar ?? ArFixo())),
       ],
       child: MaterialApp(
         theme: tema ?? AquaTheme.claro,
@@ -55,6 +58,24 @@ Future<void> montar(WidgetTester t, Widget tela,
 }
 
 /// Banco sem nenhuma observação de satélite.
+/// Qualidade do ar fixa para os testes (sem rede).
+class ArFixo implements FonteAr {
+  ArFixo([this.lista = const [], this.coleta]);
+  final List<ResumoAr> lista;
+  final DateTime? coleta;
+  int chamadas = 0;
+  bool falhar = false;
+  @override
+  Future<List<ResumoAr>> resumo() async {
+    chamadas++;
+    if (falhar) throw Exception('sem rede');
+    return lista;
+  }
+
+  @override
+  Future<DateTime?> ultimaColeta() async => coleta;
+}
+
 class SateliteVazio implements FonteSatelite {
   int chamadas = 0;
   @override

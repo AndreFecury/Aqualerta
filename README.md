@@ -279,11 +279,12 @@ flutter build apk --release
 
 ### Planned Features
 
-* [ ] Push notification infrastructure
-* [ ] Offline caching layer
+* [x] Push notification infrastructure
+* [x] Offline caching layer (regions on device)
 * [ ] Machine learning risk prediction
 * [ ] Administrative dashboard
-* [ ] CEMADEN integration
+* [x] CEMADEN integration (rain gauges)
+* [x] Air quality per region (CAMS model via Open-Meteo, INPE fire hotspots, MMA IQAr)
 * [ ] Android home widget
 * [ ] Web platform
 

@@ -68,9 +68,11 @@ class Painel extends Equatable {
   }
 
   /// Maior severidade entre os alertas ativos da região (Baixo se não houver).
+  /// Aviso de qualidade do ar não conta: o risco aqui é de cheia.
   Severidade severidadeDaRegiao(String id) {
     var s = Severidade.baixo;
     for (final a in ativos) {
+      if (a.ehAr) continue;
       if (a.regiaoId == id && a.severidade >= s) s = a.severidade;
     }
     return s;
