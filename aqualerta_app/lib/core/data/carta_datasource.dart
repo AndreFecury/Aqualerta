@@ -212,16 +212,15 @@ class CartaDatasource {
   }
 
   /// Avisa quando alertas, eventos ou leituras mudam no banco.
-  RealtimeChannel ouvirMudancas(void Function() aoMudar) {
-    final canal = _c.channel('aqualerta-v3');
-    for (final tabela in ['alerts', 'flood_events', 'hydro_readings']) {
-      canal.onPostgresChanges(
-        event: PostgresChangeEvent.all,
-        schema: 'public',
-        table: tabela,
-        callback: (_) => aoMudar(),
-      );
-    }
-    return canal..subscribe();
-  }
+  ///
+  /// Ouve o sinal "mudou" do canal público `dados`, que o banco manda no
+  /// máximo 1 vez por minuto (migração 20261121b_sinal_dados.sql), em vez de
+  /// uma mensagem por linha alterada.
+  RealtimeChannel ouvirMudancas(void Function() aoMudar) => _c
+      .channel('dados')
+      .onBroadcast(event: 'mudou', callback: (_) => aoMudar())
+      .subscribe();
+
+  /// Fecha o canal (app em segundo plano libera a conexão).
+  Future<void> pararDeOuvir(RealtimeChannel canal) => _c.removeChannel(canal);
 }

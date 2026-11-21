@@ -1,9 +1,13 @@
 import 'dart:async';
+import 'dart:math';
+
+import 'package:flutter/widgets.dart' show AppLifecycleListener;
 import 'package:equatable/equatable.dart';
 import 'package:aqualerta/features/map/presentation/cubit/camadas_cubit.dart'
     show InicioMapa;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:aqualerta/core/data/cache_regioes.dart';
 import 'package:aqualerta/core/data/carta_datasource.dart';
 import 'package:aqualerta/core/domain/carta.dart';
 import 'package:aqualerta/core/domain/severidade.dart';
@@ -170,31 +174,81 @@ class Painel extends Equatable {
 }
 
 class PainelCubit extends Cubit<Painel> {
-  PainelCubit(this._dados, {bool ouvirTempoReal = true})
-      : super(const Painel()) {
+  PainelCubit(this._dados,
+      {bool ouvirTempoReal = true, CacheRegioes? cache, Random? sorteio})
+      : _cache = cache ?? CacheRegioes(),
+        _sorteio = sorteio ?? Random(),
+        super(const Painel()) {
     carregar();
     if (ouvirTempoReal) {
-      _canal = _dados.ouvirMudancas(() {
-        _espera?.cancel();
-        // Junta várias mudanças seguidas numa única atualização.
-        _espera = Timer(const Duration(seconds: 2), carregar);
-      });
+      _ouvir();
+      // Em segundo plano o app solta a conexão de tempo real depois de
+      // [folgaSegundoPlano] (o Supabase gratuito tem 200 conexões; os avisos
+      // importantes chegam por push). Ao voltar, reconecta e atualiza.
+      _ciclo = AppLifecycleListener(
+        onHide: () {
+          _soltar?.cancel();
+          _soltar = Timer(folgaSegundoPlano, _desligar);
+        },
+        onShow: () {
+          _soltar?.cancel();
+          if (_canal == null) {
+            _ouvir();
+            carregar(tudo: false);
+          }
+        },
+      );
     }
   }
 
-  final CartaDatasource _dados;
-  RealtimeChannel? _canal;
-  Timer? _espera;
+  /// Quanto o app espera em segundo plano antes de soltar a conexão (troca
+  /// rápida de app não derruba nada).
+  static const folgaSegundoPlano = Duration(seconds: 30);
 
-  Future<void> carregar() async {
+  /// Espalha as recargas depois de um sinal: cada aparelho espera um tempo
+  /// sorteado até este limite, para o servidor não receber todos de uma vez.
+  static const espalhamento = Duration(seconds: 20);
+
+  final CartaDatasource _dados;
+  final CacheRegioes _cache;
+  final Random _sorteio;
+  RealtimeChannel? _canal;
+  AppLifecycleListener? _ciclo;
+  Timer? _espera;
+  Timer? _soltar;
+
+  void _ouvir() {
+    _canal = _dados.ouvirMudancas(() {
+      if (_espera?.isActive ?? false) return; // já tem recarga marcada
+      final ms = _sorteio.nextInt(espalhamento.inMilliseconds + 1);
+      _espera =
+          Timer(Duration(milliseconds: 2000 + ms), () => carregar(tudo: false));
+    });
+  }
+
+  Future<void> _desligar() async {
+    final c = _canal;
+    _canal = null;
+    _espera?.cancel();
+    if (c != null) {
+      try {
+        await _dados.pararDeOuvir(c);
+      } catch (_) {}
+    }
+  }
+
+  /// [tudo] = false recarrega só o que muda (alertas, leituras, eventos):
+  /// regiões e regiões seguidas ficam como estão.
+  Future<void> carregar({bool tudo = true}) async {
+    if (!tudo && !state.temDados) tudo = true;
     emit(state.copyWith(carregando: true, limparErro: true));
     try {
       final resultados = await Future.wait([
-        _dados.regioes(),
+        tudo ? _cache.obter(_dados.regioes) : Future.value(state.regioes),
         _dados.eventos(),
         _dados.estacoes(),
         _dados.alertas(),
-        _dados.regioesSeguidas(),
+        tudo ? _dados.regioesSeguidas() : Future.value(state.seguidas),
         _dados.chuvaUltimaColeta(),
       ]);
       final regioes = resultados[0] as List<Regiao>;
@@ -242,7 +296,9 @@ class PainelCubit extends Cubit<Painel> {
   @override
   Future<void> close() async {
     _espera?.cancel();
-    await _canal?.unsubscribe();
+    _soltar?.cancel();
+    _ciclo?.dispose();
+    await _desligar();
     return super.close();
   }
 }
