@@ -50,8 +50,11 @@ class _CartaContada extends CartaFalsa {
   }
 
   @override
-  RealtimeChannel ouvirMudancas(void Function() aoMudar) {
+  RealtimeChannel ouvirMudancas(void Function() aoMudar,
+      {void Function()? aoFalhar, void Function()? aoConectar}) {
     sinal = aoMudar;
+    falha = aoFalhar;
+    canaisAbertos++;
     // Canal só criado, nunca conectado.
     return SupabaseClient('http://localhost', 'x',
             authOptions: const AuthClientOptions(autoRefreshToken: false))
@@ -60,6 +63,13 @@ class _CartaContada extends CartaFalsa {
 
   @override
   Future<void> pararDeOuvir(RealtimeChannel canal) async => canaisFechados++;
+
+  void Function()? falha;
+  int canaisAbertos = 0;
+  int renovacoes = 0;
+
+  @override
+  Future<void> renovarSessaoSeVencida() async => renovacoes++;
 }
 
 void main() {
@@ -190,6 +200,42 @@ void main() {
       await t.pump(PainelCubit.folgaSegundoPlano);
       expect(dados.canaisFechados, 0);
       expect(dados.alertasPedidos, 1);
+      await painel.close();
+    });
+
+    testWidgets('inscrição recusada (token vencido): renova e reconecta',
+        (t) async {
+      final dados = _CartaContada();
+      final painel = PainelCubit(dados, sorteio: Random(1));
+      await t.pump(const Duration(milliseconds: 10));
+      expect(dados.canaisAbertos, 1);
+
+      dados.falha!();
+      expect(dados.canaisFechados, 1, reason: 'solta o canal recusado');
+      await t.pump(const Duration(seconds: 1));
+      expect(dados.canaisAbertos, 1, reason: 'espera antes de tentar');
+      await t.pump(const Duration(seconds: 1, milliseconds: 10));
+      expect(dados.renovacoes, 1, reason: 'renova a sessão antes');
+      expect(dados.canaisAbertos, 2);
+      expect(dados.alertasPedidos, 2, reason: 'atualiza o que perdeu');
+
+      // Falhou de novo: a espera cresce (10 s).
+      dados.falha!();
+      await t.pump(const Duration(seconds: 9));
+      expect(dados.canaisAbertos, 2);
+      await t.pump(const Duration(seconds: 1, milliseconds: 10));
+      expect(dados.canaisAbertos, 3);
+
+      // Em segundo plano não insiste.
+      dados.falha!();
+      t.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+      t.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+      await t.pump(const Duration(seconds: 31));
+      expect(dados.canaisAbertos, 3);
+      t.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+      t.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await t.pump(const Duration(milliseconds: 10));
+      expect(dados.canaisAbertos, 4, reason: 'ao voltar, conecta');
       await painel.close();
     });
   });

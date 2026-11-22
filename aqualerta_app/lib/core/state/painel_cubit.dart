@@ -189,10 +189,12 @@ class PainelCubit extends Cubit<Painel> {
       // importantes chegam por push). Ao voltar, reconecta e atualiza.
       _ciclo = AppLifecycleListener(
         onHide: () {
+          _emSegundoPlano = true;
           _soltar?.cancel();
           _soltar = Timer(folgaSegundoPlano, _desligar);
         },
         onShow: () {
+          _emSegundoPlano = false;
           _soltar?.cancel();
           if (_canal == null) {
             _ouvir();
@@ -218,6 +220,7 @@ class PainelCubit extends Cubit<Painel> {
   AppLifecycleListener? _ciclo;
   Timer? _espera;
   Timer? _soltar;
+  bool _emSegundoPlano = false;
 
   void _ouvir() {
     _canal = _dados.ouvirMudancas(() {
@@ -225,10 +228,45 @@ class PainelCubit extends Cubit<Painel> {
       final ms = _sorteio.nextInt(espalhamento.inMilliseconds + 1);
       _espera =
           Timer(Duration(milliseconds: 2000 + ms), () => carregar(tudo: false));
+    }, aoFalhar: _reconectar, aoConectar: () => _tentativas = 0);
+  }
+
+  /// Esperas entre novas tentativas quando a inscrição no canal falha.
+  static const esperasReconexao = [
+    Duration(seconds: 2),
+    Duration(seconds: 10),
+    Duration(seconds: 30),
+    Duration(minutes: 1),
+    Duration(minutes: 5),
+  ];
+  int _tentativas = 0;
+  Timer? _retentar;
+
+  /// Inscrição recusada (ex.: token vencido ao abrir o app): solta o canal,
+  /// renova a sessão e tenta de novo, com espera crescente.
+  void _reconectar() {
+    if (_retentar?.isActive ?? false) return;
+    final c = _canal;
+    _canal = null;
+    if (c != null) {
+      _dados.pararDeOuvir(c).catchError((_) {});
+    }
+    final espera =
+        esperasReconexao[min(_tentativas, esperasReconexao.length - 1)];
+    _tentativas++;
+    _retentar = Timer(espera, () async {
+      try {
+        await _dados.renovarSessaoSeVencida();
+      } catch (_) {}
+      if (!isClosed && _canal == null && !_emSegundoPlano) {
+        _ouvir();
+        carregar(tudo: false);
+      }
     });
   }
 
   Future<void> _desligar() async {
+    _retentar?.cancel();
     final c = _canal;
     _canal = null;
     _espera?.cancel();

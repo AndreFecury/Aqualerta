@@ -217,17 +217,36 @@ class CartaDatasource {
   /// Ouve o sinal "mudou" do canal público `dados`, que o banco manda no
   /// máximo 1 vez por minuto (migração 20261121b_sinal_dados.sql), em vez de
   /// uma mensagem por linha alterada.
-  RealtimeChannel ouvirMudancas(void Function() aoMudar) => _c
-      .channel('dados')
-      .onBroadcast(
-          event: 'mudou',
-          callback: (_) {
-            // Aparece no logcat (tag flutter): serve para conferir no aparelho.
-            debugPrint('AquaAlerta: sinal "mudou" recebido');
-            aoMudar();
-          })
-      .subscribe((estado, [erro]) => debugPrint(
-          'AquaAlerta: canal dados $estado${erro == null ? '' : ' ($erro)'}'));
+  /// [aoFalhar] é chamado quando a inscrição falha (ex.: token de login
+  /// vencido ao abrir o app); [aoConectar], quando entra no canal.
+  RealtimeChannel ouvirMudancas(void Function() aoMudar,
+          {void Function()? aoFalhar, void Function()? aoConectar}) =>
+      _c
+          .channel('dados')
+          .onBroadcast(
+              event: 'mudou',
+              callback: (_) {
+                // Aparece no logcat (tag flutter): serve para conferir no aparelho.
+                debugPrint('AquaAlerta: sinal "mudou" recebido');
+                aoMudar();
+              })
+          .subscribe((estado, [erro]) {
+        debugPrint(
+            'AquaAlerta: canal dados $estado${erro == null ? '' : ' ($erro)'}');
+        if (estado == RealtimeSubscribeStatus.subscribed) {
+          aoConectar?.call();
+        } else if (estado == RealtimeSubscribeStatus.channelError ||
+            estado == RealtimeSubscribeStatus.timedOut) {
+          aoFalhar?.call();
+        }
+      });
+
+  /// Renova a sessão se o token de login já venceu (o app pode abrir depois
+  /// de horas parado, antes da renovação automática).
+  Future<void> renovarSessaoSeVencida() async {
+    final s = _c.auth.currentSession;
+    if (s != null && s.isExpired) await _c.auth.refreshSession();
+  }
 
   /// Fecha o canal (app em segundo plano libera a conexão).
   Future<void> pararDeOuvir(RealtimeChannel canal) => _c.removeChannel(canal);
