@@ -3,6 +3,32 @@
 Gerado em 22/11/2026. Regras definidas antes no
 [pré-registro](ar-validacao-preregistro.md) (commit 39e2a33).
 
+## Em resumo
+
+- O modelo acerta o **nível em cerca de 3 de cada 4 dias** (71 de 92 em Manaus, 65 de 87 em
+  Porto Velho, valor recebido). Isso não é "errar pouco": nos **picos de fumaça ele erra
+  feio** — em Manaus, 08/10 (modelo 41,5 × sensor 143,3 µg/m³) e 17/10 (61,1 × 198,7).
+- A diferença mediana pequena (−3 a +4 µg/m³) é puxada pelos dias limpos e esconde a cauda.
+- O "sensor" também não é a verdade: é um **aparelho de baixo custo** (AirGradient), não um
+  monitor de referência; sem saber se a OpenAQ entrega valor bruto ou corrigido, a
+  comparação é entre duas estimativas.
+- **Duas cidades não permitem generalizar** para Manacapuru, Itacoatiara, Parintins e
+  Rio Branco: outro relevo de fumaça, outras distâncias das queimadas, nenhum sensor para
+  conferir. Tudo o que vale aqui vale para Manaus e Porto Velho.
+
+## Decisões do dono (22/11/2026)
+
+1. **"Boa" nunca sozinho** nas regiões só com modelo (sem sensor utilizável), em época de
+   fumaça ou com muitos focos: "o modelo costuma subestimar fumaça forte; se há cheiro de
+   queimado ou céu encoberto, trate o ar como ruim". Vale para todas as regiões.
+2. Sem texto condicional para Ruim+ do modelo; onde há sensor, ele aparece ao lado (Fase 4).
+3. Aviso por sensor **só em Manaus**, implementado e testado, com a chave **desligada**.
+   Antes de ligar (julho de 2027): novo teste com dados de 2027 e o
+   [pré-registro v2](ar-validacao-preregistro.md). Porto Velho: sem aviso, só leitura.
+4. Divergência assimétrica: sensor pior que o modelo em 2+ níveis aparece desde o 1º dia;
+   modelo pior que o sensor continua exigindo 5 dias seguidos.
+5. O dono escreve à OpenAQ e aos donos das estações (rascunhos no fim).
+
 ## Dados
 
 | | Manaus | Porto Velho |
@@ -180,7 +206,7 @@ limiares. Proposta: `divergencia_dias_seguidos` = 3. Fica para a Fase 4.
 O efeito da correção da EPA depende da umidade: em Manaus, nos dias úmidos o
 corrigido fica bem abaixo do modelo. As amostras nas pontas são pequenas.
 
-## Decisões pendentes (suas)
+## Perguntas que ficaram para o dono (respondidas em 22/11 — ver "Decisões do dono")
 
 1. **R2 em Porto Velho:** as séries discordam (41 % × 15 %). Mudar o texto de
    "Boa"?
@@ -191,7 +217,9 @@ corrigido fica bem abaixo do modelo. As amostras nas pontas são pequenas.
 4. **R7:** baixar a frase de divergência para 3 dias seguidos?
 5. Mandar o e-mail para a OpenAQ (abaixo)?
 
-## Rascunho de e-mail (para você enviar, se quiser) — info@openaq.org
+## Rascunhos (o dono envia)
+
+### OpenAQ — info@openaq.org
 
 > Assunto: AirGradient PM2.5 on OpenAQ — raw or corrected?
 >
@@ -201,3 +229,15 @@ corrigido fica bem abaixo do modelo. As amostras nas pontas são pequenas.
 > are the raw sensor readings or already corrected (e.g. with the EPA
 > correction AirGradient offers)? And is the relativehumidity parameter the
 > device's internal reading? Thank you.
+
+### Donos das estações (Greenpeace Brasil — Manaus; AIrWatch — Porto Velho)
+
+> Assunto: Sensor de qualidade do ar em [Manaus / Porto Velho] — uso no AquaAlerta
+>
+> Olá! O AquaAlerta é um app gratuito de alertas de cheia e qualidade do ar na Amazônia.
+> Usamos, pela OpenAQ, os dados do sensor AirGradient de vocês em [Manaus / Porto Velho]
+> para comparar com a estimativa do modelo CAMS. Duas perguntas: (1) o MP2,5 que o
+> aparelho publica é o valor bruto ou já corrigido (por exemplo, com a correção da EPA)?
+> (2) Onde o aparelho está instalado (altura, perto de rua, protegido do sol)? Se
+> quiserem, mandamos o resumo da comparação de ago–out de 2026. Obrigado!
+
