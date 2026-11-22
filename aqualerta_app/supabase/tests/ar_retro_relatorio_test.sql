@@ -22,6 +22,8 @@ SELECT pg_temp.confere((SELECT episodios = 1 AND dias_com_aviso = 1 FROM public.
 SELECT pg_temp.confere((SELECT episodios = 0 FROM public.ar_retro_simular(75, true)), 'corrigido (70) não passa de 75');
 ROLLBACK;
 BEGIN;
+CREATE OR REPLACE FUNCTION pg_temp.confere(cond boolean, msg text) RETURNS void
+LANGUAGE plpgsql AS $$ BEGIN IF cond IS NOT TRUE THEN RAISE EXCEPTION 'FALHOU: %', msg; END IF; RAISE NOTICE 'ok: %', msg; END $$;
 INSERT INTO public.ar_validacao_horas (region_id, hora, origem, modelo_pm25, sensor_pm25, sensor_pm25_epa, valido)
 SELECT 'a0000000-0000-0000-0000-000000000001', '2026-08-10 04:00+00'::timestamptz + i * interval '1 hour', 'retro', 10,
        CASE WHEN i BETWEEN 10 AND 13 THEN 100 ELSE 20 END, CASE WHEN i BETWEEN 10 AND 13 THEN 70 ELSE 10 END, true
