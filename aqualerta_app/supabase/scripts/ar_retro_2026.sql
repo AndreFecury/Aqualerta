@@ -172,11 +172,10 @@ BEGIN
                         THEN 'travado' END,
                    CASE WHEN pm.hora_ant = pm.hora - interval '1 hour'
                              AND abs(pm.pm25 - pm.ant) > public.ar_cfg('sensor_salto_max_ugm3') THEN 'salto' END,
-                   CASE WHEN ur.ur >= public.ar_cfg('ur_saturada') THEN 'ur_saturada' END,
                    CASE WHEN ur.ur IS NULL THEN 'sem_ur' END], NULL) AS marcas
           FROM pm LEFT JOIN ur ON ur.location_id = pm.location_id AND ur.hora = pm.hora
     ), ok AS (
-        SELECT m.*, NOT (m.marcas && ARRAY['travado', 'salto', 'ur_saturada']) AS ok FROM marcado m
+        SELECT m.*, NOT (m.marcas && ARRAY['travado', 'salto']) AS ok FROM marcado m
     ), por_regiao AS (
         SELECT o.region_id, o.hora,
                round(avg(o.pm25) FILTER (WHERE o.ok), 2) AS sensor,

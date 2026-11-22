@@ -35,23 +35,53 @@ function km(a, b, c, d) {
   return 6371 * 2 * Math.asin(Math.sqrt(h));
 }
 
+// Download com no máximo 2 ao mesmo tempo, 4 tentativas com espera crescente
+// e conferência do tamanho anunciado pelo servidor. Arquivo já completo é reaproveitado.
+async function tamanhoNoServidor(url) {
+  const r = await fetch(url, { method: 'HEAD' });
+  if (!r.ok) throw new Error(`HEAD ${r.status}`);
+  return Number(r.headers.get('content-length'));
+}
 async function baixar(mes) {
+  const url = BASE + `focos_mensal_${mes}.csv`;
   const arq = path.join(pasta, `focos_mensal_${mes}.csv`);
-  if (fs.existsSync(arq) && fs.statSync(arq).size > 1e6) return arq;
-  const r = await fetch(BASE + `focos_mensal_${mes}.csv`);
-  if (!r.ok) throw new Error(`${mes}: HTTP ${r.status}`);
-  await pipeline(r.body, fs.createWriteStream(arq));
-  return arq;
+  for (let tentativa = 1; ; tentativa++) {
+    try {
+      const esperado = await tamanhoNoServidor(url);
+      if (fs.existsSync(arq) && fs.statSync(arq).size === esperado) return arq;
+      const r = await fetch(url);
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      await pipeline(r.body, fs.createWriteStream(arq + '.part'));
+      const obtido = fs.statSync(arq + '.part').size;
+      if (obtido !== esperado) throw new Error(`tamanho ${obtido} != ${esperado}`);
+      fs.renameSync(arq + '.part', arq);
+      return arq;
+    } catch (e) {
+      if (tentativa >= 4) throw new Error(`${mes}: ${e.message} (desisti após 4 tentativas)`);
+      console.error(`${mes}: ${e.message}; nova tentativa em ${10 * tentativa} s`);
+      await new Promise(r => setTimeout(r, 10000 * tentativa));
+    }
+  }
+}
+async function baixarTodos(meses, simultaneos = 2) {
+  const fila = [...meses], out = {};
+  await Promise.all(Array.from({ length: simultaneos }, async () => {
+    while (fila.length) { const m = fila.shift(); out[m] = await baixar(m); }
+  }));
+  return out;
 }
 
 fs.mkdirSync(pasta, { recursive: true });
 // celulas[regiao][raio][dia] = Set de células únicas
 const celulas = Object.fromEntries(REGIOES.map(g => [g.id, Object.fromEntries(RAIOS.map(k => [k, new Map()]))]));
 const porSatelite = new Map();
+// Dias locais com ALGUM foco polar na América do Sul inteira: sem nenhum = arquivo faltando.
+const diasPresentes = Object.fromEntries(REGIOES.map(g => [g.id, new Set()]));
 let linhas = 0;
 
+const arquivos = await baixarTodos(MESES);
 for (const mes of MESES) {
-  const arq = await baixar(mes);
+  const arq = arquivos[mes];
   const rl = readline.createInterface({ input: fs.createReadStream(arq, 'utf8'), crlfDelay: Infinity });
   let cab = null;
   for await (const l of rl) {
@@ -65,6 +95,7 @@ for (const mes of MESES) {
     if (Number.isNaN(lat) || Number.isNaN(lon) || Number.isNaN(utc.getTime())) continue;
     linhas++;
     for (const g of REGIOES) {
+      diasPresentes[g.id].add(new Date(utc.getTime() + g.fuso * 3600e3).toISOString().slice(0, 10));
       const d = km(g.lat, g.lon, lat, lon);
       if (d > Math.max(...RAIOS)) continue;
       const dia = new Date(utc.getTime() + g.fuso * 3600e3).toISOString().slice(0, 10);
@@ -90,14 +121,19 @@ const linhasSql = [];
 const resumo = [];
 for (const g of REGIOES) for (const k of RAIOS) {
   const m = celulas[g.id][k];
-  const serie = dias(INICIO, FIM).map(dia => ({ dia, n: [0, 1, 2].reduce((s, i) => s + (m.get(menos(dia, i))?.size ?? 0), 0) }));
+  const presentes = diasPresentes[g.id];
+  const todos = dias(INICIO, FIM);
+  // Janela de 3 dias só vale se os 3 dias têm arquivo; senão o dia fica faltando.
+  const serie = todos.filter(dia => [0, 1, 2].every(i => presentes.has(menos(dia, i))))
+    .map(dia => ({ dia, n: [0, 1, 2].reduce((s, i) => s + (m.get(menos(dia, i))?.size ?? 0), 0) }));
+  const faltando = todos.filter(dia => !serie.some(x => x.dia === dia));
   const ord = serie.map(s => s.n).sort((a, b) => a - b);
   const t1 = ord[Math.floor(ord.length / 3)], t2 = ord[Math.floor((2 * ord.length) / 3)];
   for (const s of serie) {
     const classe = s.n < t1 ? 'poucos' : s.n < t2 ? 'medios' : 'muitos';
     linhasSql.push(`('${g.id}', '${s.dia}', ${k}, ${s.n}, '${classe}')`);
   }
-  resumo.push(`${g.nome} ${k} km: mín ${ord[0]}, terços em ${t1} e ${t2}, máx ${ord.at(-1)}`);
+  resumo.push(`${g.nome} ${k} km: ${serie.length} dias, faltando ${faltando.length}${faltando.length ? ' (' + faltando.join(', ') + ')' : ''}; mín ${ord[0]}, terços em ${t1} e ${t2}, máx ${ord.at(-1)}`);
 }
 
 const sql = `-- Gerado por tool/inpe_fumaca_retro.mjs em ${new Date().toISOString()}
