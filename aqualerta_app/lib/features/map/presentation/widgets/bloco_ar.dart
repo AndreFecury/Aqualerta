@@ -45,6 +45,41 @@ class BlocoAr extends StatelessWidget {
       });
     }
     final r = estado.de(regiaoId);
+    final local = r?.local;
+    final medicaoLocal = <Widget>[
+      if (local != null) ...[
+        const SizedBox(height: 8),
+        Semantics(
+          label: 'Medição local: ${local.frase}',
+          excludeSemantics: true,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(top: 2),
+                child: Icon(Icons.sensors, size: 18, color: c.tinta2),
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text.rich(
+                  TextSpan(children: [
+                    TextSpan(
+                        text: 'Medição local: ',
+                        style: t.bodyMedium
+                            ?.copyWith(fontWeight: FontWeight.w600)),
+                    TextSpan(text: local.frase, style: t.bodyMedium),
+                    TextSpan(
+                        text: '\nFonte: ${local.fontes ?? 'OpenAQ'}'
+                            '${local.atualizadoEm != null ? ' · até ${horaManaus(local.atualizadoEm!)}' : ''}.',
+                        style: t.bodySmall),
+                  ]),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    ];
     final aviso = context
         .watch<PainelCubit>()
         .state
@@ -94,6 +129,7 @@ class BlocoAr extends StatelessWidget {
       corpo = [
         Text('Sem estimativa de qualidade do ar para esta região agora.',
             style: t.bodyMedium),
+        ...medicaoLocal,
       ];
     } else {
       final nivel = r.nivel!;
@@ -136,6 +172,7 @@ class BlocoAr extends StatelessWidget {
           const SizedBox(height: 6),
           Text(nivel.saude!, style: t.bodyMedium),
         ],
+        ...medicaoLocal,
         if (aviso != null)
           Align(
             alignment: Alignment.centerLeft,

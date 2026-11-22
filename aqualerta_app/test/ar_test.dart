@@ -297,6 +297,54 @@ void main() {
     });
   });
 
+  group('Medição local (OpenAQ)', () {
+    Map<String, dynamic> linhaLocal() => {
+          'region_id': 'r-compensa',
+          'pm25_24h': 21.3,
+          'iqar': 41,
+          'sensores': 2,
+          'distancia_km': 4,
+          'fontes': 'OpenAQ · PurpleAir',
+          'atualizado_em': '2026-11-22T13:00:00+00:00',
+        };
+
+    test('lê a linha da RPC e monta a frase', () {
+      final m = MedicaoLocalAr.doJson(linhaLocal())!;
+      expect(m.nivel, NivelAr.n2);
+      expect(m.frase,
+          'MP2,5 de 21,3 µg/m³ na média de 24 h (moderada, índice 41), 2 sensores a até 4 km.');
+      expect(
+          MedicaoLocalAr.doJson({...linhaLocal(), 'pm25_24h': null}), isNull);
+    });
+
+    testWidgets('aparece no cartão com a fonte quando há sensor', (t) async {
+      final r = ResumoAr.doJson(_linha())
+          .comLocal(MedicaoLocalAr.doJson(linhaLocal()));
+      await montar(t, const MapaScreen(), ar: ArFixo([r]));
+      await t.pump(const Duration(milliseconds: 100));
+      await t.scrollUntilVisible(find.textContaining('Medição local'), 200,
+          scrollable: _rolavel());
+      expect(
+          find.byWidgetPredicate((w) =>
+              w is Semantics &&
+              (w.properties.label ?? '')
+                  .startsWith('Medição local: MP2,5 de 21,3')),
+          findsOneWidget);
+      expect(find.textContaining('OpenAQ · PurpleAir', findRichText: true),
+          findsOneWidget);
+    });
+
+    testWidgets('sem sensor, nada muda no cartão', (t) async {
+      await montar(t, const MapaScreen(),
+          ar: ArFixo([ResumoAr.doJson(_linha())]));
+      await t.pump(const Duration(milliseconds: 100));
+      await t.scrollUntilVisible(find.text('Ar moderada · índice 54'), 200,
+          scrollable: _rolavel());
+      expect(find.textContaining('Medição local', findRichText: true),
+          findsNothing);
+    });
+  });
+
   group('Perfil', () {
     test('preferência de ar vai para o banco', () {
       expect(const PreferenciasNotificacao().paraBanco()['ar'], true);
