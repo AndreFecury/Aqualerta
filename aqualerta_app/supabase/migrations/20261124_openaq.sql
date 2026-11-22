@@ -1,7 +1,7 @@
 -- ============================================================
 -- AQUALERTA — Medição local de MP2,5 pela OpenAQ (sensores de verdade)
 --
--- Fica PARADO até existir o segredo `openaq_key` no Vault (chave gratuita
+-- Fica PARADO até existir o segredo "openaq_key" no Vault (chave gratuita
 -- criada em https://explore.openaq.org/register). Com a chave:
 --   - openaq_pedir() (:16 de toda hora)
 --       * 1 vez por dia: procura estações com MP2,5 (parâmetro 2) num raio
