@@ -31,6 +31,7 @@ class _PainelExibicao extends StatelessWidget {
             const AmostraHachura(severidade: Severidade.alto, tamanho: 24),
           Camada.aguaSatelite =>
             Icon(Icons.satellite_alt_outlined, color: c.tinta),
+          Camada.qualidadeAr => Icon(Icons.air, color: c.tinta),
           Camada.regioes =>
             const AmostraHachura(severidade: Severidade.baixo, tamanho: 24),
           Camada.estacoes => Icon(Icons.water_drop_outlined, color: c.tinta),

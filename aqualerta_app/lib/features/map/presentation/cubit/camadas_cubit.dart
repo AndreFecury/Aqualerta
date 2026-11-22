@@ -22,6 +22,9 @@ enum Camada {
   // Desligada por padrão (fora do conjunto padrão de ExibicaoMapa).
   aguaSatelite('Água detectada por satélite',
       'Radar Sentinel-1 (Copernicus). Não vê água sob a floresta'),
+  // Desligada por padrão. Pinta a região com a cor do IQAr, por baixo do
+  // contorno de risco de cheia (as duas coisas nunca se misturam).
+  qualidadeAr('Qualidade do ar', 'Estimativa do modelo CAMS, por região'),
   regioes('Regiões monitoradas', 'Bairros e cidades com o nível de risco'),
   estacoes('Estações dos rios', 'Nível do rio na última leitura da ANA'),
   minhaLocalizacao('Minha localização', 'Mostra onde você está no mapa');

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:aqualerta/core/config/mapas.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:aqualerta/core/domain/ar.dart';
 import 'package:aqualerta/core/domain/carta.dart';
@@ -192,6 +194,106 @@ void main() {
           .onPressed!();
       await t.pump(const Duration(milliseconds: 100));
       expect(find.text('Ar moderada · índice 54'), findsOneWidget);
+    });
+  });
+
+  group('Camada no mapa', () {
+    setUp(() => FundoMapa.desligado = true);
+
+    testWidgets('desligada por padrão: nada pintado e sem legenda', (t) async {
+      await montar(t, const MapaScreen(),
+          ar: ArFixo([ResumoAr.doJson(_linha())]));
+      await t.pump(const Duration(milliseconds: 100));
+      expect(find.byKey(const ValueKey('camada-ar')), findsNothing);
+      expect(find.textContaining('Ar (modelo)'), findsNothing);
+    });
+
+    testWidgets('ligada: pinta a região com a cor do IQAr e mostra a legenda',
+        (t) async {
+      await montar(t, const MapaScreen(),
+          ar: ArFixo([ResumoAr.doJson(_linha())]),
+          preferencias: {
+            'mapa.camadas': ['regioes', 'qualidadeAr'],
+          });
+      await t.pump(const Duration(milliseconds: 100));
+      await t.pump(const Duration(milliseconds: 100));
+      final camada =
+          t.widget<PolygonLayer>(find.byKey(const ValueKey('camada-ar')));
+      // Só a região com estimativa (r-compensa) é pintada.
+      expect(camada.polygons, isNotEmpty);
+      final cor = NivelAr.n2.cor(Brightness.light);
+      for (final p in camada.polygons) {
+        expect(p.borderColor, cor);
+        expect(p.color, cor.withValues(alpha: 0.32));
+        expect(p.borderStrokeWidth, 0,
+            reason: 'com as regiões ligadas, o contorno é o risco de cheia');
+      }
+      expect(find.textContaining('Ar (modelo) · '), findsOneWidget);
+      for (final n in NivelAr.values) {
+        expect(find.byKey(ValueKey('legenda-ar-${n.name}')), findsOneWidget);
+      }
+    });
+
+    testWidgets('sem as regiões ligadas, a camada desenha o próprio contorno',
+        (t) async {
+      await montar(t, const MapaScreen(),
+          ar: ArFixo([ResumoAr.doJson(_linha(iqar: 150))]),
+          preferencias: {
+            'mapa.camadas': ['qualidadeAr'],
+          });
+      await t.pump(const Duration(milliseconds: 100));
+      await t.pump(const Duration(milliseconds: 100));
+      final camada =
+          t.widget<PolygonLayer>(find.byKey(const ValueKey('camada-ar')));
+      expect(camada.polygons, isNotEmpty);
+      expect(camada.polygons.first.borderStrokeWidth, 1.8);
+      expect(
+          camada.polygons.first.borderColor, NivelAr.n4.cor(Brightness.light));
+    });
+
+    testWidgets('sem estimativa: nada pintado e a legenda diz isso', (t) async {
+      await montar(t, const MapaScreen(),
+          ar: ArFixo([ResumoAr.doJson(_linha(iqar: null))]),
+          preferencias: {
+            'mapa.camadas': ['regioes', 'qualidadeAr'],
+          });
+      await t.pump(const Duration(milliseconds: 100));
+      await t.pump(const Duration(milliseconds: 100));
+      expect(
+          t
+              .widget<PolygonLayer>(find.byKey(const ValueKey('camada-ar')))
+              .polygons,
+          isEmpty);
+      expect(find.text('Ar (modelo) · sem estimativa'), findsOneWidget);
+    });
+
+    testWidgets('erro de rede: a legenda diz que não carregou', (t) async {
+      await montar(t, const MapaScreen(),
+          ar: ArFixo()..falhar = true,
+          preferencias: {
+            'mapa.camadas': ['qualidadeAr'],
+          });
+      await t.pump(const Duration(milliseconds: 100));
+      await t.pump(const Duration(milliseconds: 100));
+      expect(find.text('Ar (modelo) · não carregou'), findsOneWidget);
+    });
+
+    testWidgets('painel de exibição liga a camada e guarda a escolha',
+        (t) async {
+      await montar(t, const MapaScreen(),
+          ar: ArFixo([ResumoAr.doJson(_linha())]));
+      await t.pump(const Duration(milliseconds: 100));
+      await t.tap(
+          find.bySemanticsLabel('Exibição do mapa: tipo de mapa e camadas'));
+      await t.pumpAndSettle();
+      final item = find.descendant(
+          of: find.byType(BottomSheet), matching: find.text('Qualidade do ar'));
+      await t.ensureVisible(item);
+      await t.pumpAndSettle();
+      await t.tap(item);
+      await t.pumpAndSettle();
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getStringList('mapa.camadas'), contains('qualidadeAr'));
     });
   });
 

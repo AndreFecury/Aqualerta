@@ -9,11 +9,13 @@ import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:aqualerta/core/config/mapas.dart';
 import 'package:aqualerta/shared/widgets/logo_maptiler.dart';
+import 'package:aqualerta/core/domain/ar.dart';
 import 'package:aqualerta/core/domain/carta.dart';
 import 'package:aqualerta/core/domain/satelite.dart';
 import 'package:aqualerta/core/domain/severidade.dart';
 import 'package:aqualerta/core/state/painel_cubit.dart';
 import 'package:aqualerta/core/utils/formato.dart';
+import 'package:aqualerta/features/map/data/ar_repository.dart';
 import 'package:aqualerta/features/map/presentation/cubit/camadas_cubit.dart';
 import 'package:aqualerta/features/map/presentation/widgets/bloco_ar.dart';
 import 'package:aqualerta/features/map/presentation/widgets/painel_exibicao.dart';
@@ -304,6 +306,19 @@ class _MapaScreenState extends State<MapaScreen>
         ? dadoSatelite?.observacao?.areas ?? const <AreaAgua>[]
         : const <AreaAgua>[];
 
+    // Qualidade do ar: todas as regiões numa busca só. O ArCubit guarda em
+    // memória por 30 min (o modelo muda de hora em hora).
+    final mostraAr = exibicao.mostra(Camada.qualidadeAr);
+    final estadoAr = mostraAr ? context.watch<ArCubit>().state : null;
+    if (estadoAr != null) {
+      final ar = context.read<ArCubit>();
+      if (estadoAr.situacao != SituacaoAr.erro && ar.vencido) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) ar.carregar();
+        });
+      }
+    }
+
     // Os dados chegam depois do primeiro desenho do mapa (que abre em
     // Manaus). Uma vez só, leva a câmera até a região principal, se a
     // pessoa ainda não mexeu no mapa.
@@ -396,6 +411,30 @@ class _MapaScreenState extends State<MapaScreen>
                                   tileUpdateTransformer:
                                       TileUpdateTransformers.throttle(
                                           const Duration(milliseconds: 250)),
+                                ),
+                              // Por baixo de tudo: só o preenchimento muda de
+                              // cor; o contorno continua sendo o risco de cheia.
+                              if (estadoAr != null)
+                                PolygonLayer(
+                                  key: const ValueKey('camada-ar'),
+                                  polygons: [
+                                    for (final r in painel.regioes)
+                                      if (estadoAr.de(r.id)?.nivel
+                                          case final nivel?)
+                                        for (final anel in r.contornos)
+                                          if (anel.length >= 3)
+                                            Polygon(
+                                              points: anel,
+                                              color: nivel
+                                                  .cor(brilho)
+                                                  .withValues(alpha: 0.32),
+                                              borderColor: nivel.cor(brilho),
+                                              borderStrokeWidth: exibicao
+                                                      .mostra(Camada.regioes)
+                                                  ? 0
+                                                  : 1.8,
+                                            ),
+                                  ],
                                 ),
                               if (areasSatelite.isNotEmpty)
                                 PolygonLayer(
@@ -618,12 +657,24 @@ class _MapaScreenState extends State<MapaScreen>
                               ),
                             ),
                           ),
-                        if (mostraSatelite)
+                        if (mostraSatelite || estadoAr != null)
                           Positioned(
                             left: 12,
                             top: MediaQuery.paddingOf(context).top + 76,
-                            child: _LegendaSatelite(
-                                dado: dadoSatelite, temRegiao: regiao != null),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                if (estadoAr != null)
+                                  _LegendaAr(estado: estadoAr),
+                                if (estadoAr != null && mostraSatelite)
+                                  const SizedBox(height: 6),
+                                if (mostraSatelite)
+                                  _LegendaSatelite(
+                                      dado: dadoSatelite,
+                                      temRegiao: regiao != null),
+                              ],
+                            ),
                           ),
                         // Botões do mapa
                         Positioned(
@@ -1297,6 +1348,67 @@ class _LegendaSatelite extends StatelessWidget {
             const SizedBox(width: 8),
             Flexible(
               child: Text('Água por satélite · $detalhe',
+                  style: t.labelSmall, overflow: TextOverflow.ellipsis),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Legenda da camada de qualidade do ar: as cinco cores do IQAr (MMA), da
+/// boa à péssima, e quando o modelo foi atualizado.
+class _LegendaAr extends StatelessWidget {
+  const _LegendaAr({required this.estado});
+  final EstadoAr estado;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = AquaColors.of(context);
+    final t = Theme.of(context).textTheme;
+    final brilho = Theme.of(context).brightness;
+    DateTime? ultima;
+    for (final r in estado.regioes.values) {
+      final a = r.atualizadoEm;
+      if (r.iqar != null &&
+          a != null &&
+          (ultima == null || a.isAfter(ultima))) {
+        ultima = a;
+      }
+    }
+    final detalhe = switch (estado.situacao) {
+      SituacaoAr.pronto when ultima != null => formatarHaQuanto(ultima),
+      SituacaoAr.pronto => 'sem estimativa',
+      SituacaoAr.erro => 'não carregou',
+      SituacaoAr.carregando => 'carregando…',
+    };
+    return Semantics(
+      label: 'Legenda: a cor da região é a qualidade do ar estimada pelo '
+          'modelo, de boa, mais clara, a péssima, mais escura; $detalhe',
+      excludeSemantics: true,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        constraints: const BoxConstraints(maxWidth: 240),
+        decoration: BoxDecoration(
+          color: c.papel.withValues(alpha: 0.94),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: c.linha),
+          boxShadow: [BoxShadow(color: c.sombra, blurRadius: 8)],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (final n in NivelAr.values)
+              Container(
+                key: ValueKey('legenda-ar-${n.name}'),
+                width: 10,
+                height: 14,
+                color: n.cor(brilho),
+              ),
+            const SizedBox(width: 8),
+            Flexible(
+              child: Text('Ar (modelo) · $detalhe',
                   style: t.labelSmall, overflow: TextOverflow.ellipsis),
             ),
           ],
