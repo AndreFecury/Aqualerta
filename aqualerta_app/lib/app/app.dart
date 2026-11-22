@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:aqualerta/core/atualizacao/atualizacao.dart';
+import 'package:aqualerta/core/versao/versao_no_servidor.dart';
 import 'package:aqualerta/shared/theme/aqua_theme.dart';
 import 'package:aqualerta/features/settings/presentation/cubit/aparencia_cubit.dart';
 import 'package:aqualerta/features/settings/presentation/cubit/notificacoes_cubit.dart';
@@ -23,6 +24,7 @@ class AqualertaApp extends StatefulWidget {
 
 class _AqualertaAppState extends State<AqualertaApp> {
   late final GoRouter _router;
+  final _versao = VersaoNoServidor();
 
   @override
   void initState() {
@@ -35,6 +37,10 @@ class _AqualertaAppState extends State<AqualertaApp> {
         _router.go('/login');
       } else if (event == AuthChangeEvent.signedIn) {
         _router.go('/map');
+      }
+      if (event == AuthChangeEvent.initialSession ||
+          event == AuthChangeEvent.signedIn) {
+        _versao.registrar();
       }
     });
   }

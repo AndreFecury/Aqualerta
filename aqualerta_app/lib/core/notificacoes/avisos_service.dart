@@ -78,6 +78,8 @@ class AvisosService {
       // Com o app aberto o Android não mostra o push sozinho. O id do aviso
       // é o do alerta, então o aviso local do Realtime e o push viram um só.
       FirebaseMessaging.onMessage.listen((m) {
+        debugPrint('AquaAlerta: push recebido com o app aberto '
+            '(alerta ${m.data['alert_id']})');
         final n = m.notification;
         if (n == null) return;
         final alertaId = m.data['alert_id'] as String?;

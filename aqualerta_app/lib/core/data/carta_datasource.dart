@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:latlong2/latlong.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:aqualerta/core/domain/carta.dart';
@@ -218,8 +219,15 @@ class CartaDatasource {
   /// uma mensagem por linha alterada.
   RealtimeChannel ouvirMudancas(void Function() aoMudar) => _c
       .channel('dados')
-      .onBroadcast(event: 'mudou', callback: (_) => aoMudar())
-      .subscribe();
+      .onBroadcast(
+          event: 'mudou',
+          callback: (_) {
+            // Aparece no logcat (tag flutter): serve para conferir no aparelho.
+            debugPrint('AquaAlerta: sinal "mudou" recebido');
+            aoMudar();
+          })
+      .subscribe((estado, [erro]) => debugPrint(
+          'AquaAlerta: canal dados $estado${erro == null ? '' : ' ($erro)'}'));
 
   /// Fecha o canal (app em segundo plano libera a conexão).
   Future<void> pararDeOuvir(RealtimeChannel canal) => _c.removeChannel(canal);
