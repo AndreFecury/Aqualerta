@@ -257,3 +257,51 @@ class ContextoAr {
 const textoCautelaBoa =
     'O modelo costuma subestimar fumaça forte; se há cheiro de queimado ou '
     'céu encoberto, trate o ar como ruim.';
+
+/// Aviso de qualidade do ar pelo SENSOR (tabela ar_avisos, migração
+/// 20261126b). Usa o índice em tempo quase real (NowCast da EPA), não o IQAr
+/// oficial do MMA. O modelo nunca abre aviso.
+class AvisoAr {
+  const AvisoAr({
+    required this.id,
+    required this.regiaoId,
+    required this.severidade,
+    required this.inicio,
+    required this.ativo,
+    this.limite = 75,
+    this.nowcastAtual,
+    this.nowcastMax,
+    this.fim,
+    this.motivoFim,
+  });
+
+  final String id;
+  final String regiaoId;
+  final Severidade severidade;
+  final double limite;
+  final double? nowcastAtual;
+  final double? nowcastMax;
+  final DateTime inicio;
+  final DateTime? fim;
+  final bool ativo;
+  final String? motivoFim;
+
+  NivelAr get nivel => NivelAr.doAviso(severidade);
+
+  /// "Ar muito ruim" / "Ar péssimo".
+  String get titulo =>
+      severidade == Severidade.critico ? 'Ar péssimo' : 'Ar muito ruim';
+
+  factory AvisoAr.doJson(Map<String, dynamic> j) => AvisoAr(
+        id: j['id'] as String,
+        regiaoId: j['region_id'] as String,
+        severidade: Severidade.doCodigo(j['severity'] as String?),
+        limite: (j['limite_ugm3'] as num?)?.toDouble() ?? 75,
+        nowcastAtual: (j['nowcast_atual'] as num?)?.toDouble(),
+        nowcastMax: (j['nowcast_max'] as num?)?.toDouble(),
+        inicio: DateTime.parse(j['inicio'] as String),
+        fim: j['fim'] == null ? null : DateTime.parse(j['fim'] as String),
+        ativo: j['situacao'] == 'ativo',
+        motivoFim: j['motivo_fim'] as String?,
+      );
+}

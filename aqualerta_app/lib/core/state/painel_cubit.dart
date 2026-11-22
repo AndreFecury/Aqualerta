@@ -9,6 +9,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:aqualerta/core/data/cache_regioes.dart';
 import 'package:aqualerta/core/data/carta_datasource.dart';
+import 'package:aqualerta/core/domain/ar.dart';
 import 'package:aqualerta/core/domain/carta.dart';
 import 'package:aqualerta/core/domain/severidade.dart';
 
@@ -25,7 +26,23 @@ class Painel extends Equatable {
     this.atualizadoEm,
     this.bancoSemViewsV3 = false,
     this.chuvaColetadaEm,
+    this.avisosAr = const [],
   });
+
+  /// Avisos de qualidade do ar pelo sensor (separados dos alertas de cheia).
+  final List<AvisoAr> avisosAr;
+
+  List<AvisoAr> get avisosArAtivos => [
+        for (final a in avisosAr)
+          if (a.ativo) a
+      ];
+
+  AvisoAr? avisoAr(String id) {
+    for (final a in avisosAr) {
+      if (a.id == id) return a;
+    }
+    return null;
+  }
 
   final bool carregando;
 
@@ -148,6 +165,7 @@ class Painel extends Equatable {
     Set<String>? seguidas,
     DateTime? atualizadoEm,
     bool? bancoSemViewsV3,
+    List<AvisoAr>? avisosAr,
   }) =>
       Painel(
         carregando: carregando ?? this.carregando,
@@ -159,6 +177,8 @@ class Painel extends Equatable {
         seguidas: seguidas ?? this.seguidas,
         atualizadoEm: atualizadoEm ?? this.atualizadoEm,
         bancoSemViewsV3: bancoSemViewsV3 ?? this.bancoSemViewsV3,
+        chuvaColetadaEm: chuvaColetadaEm,
+        avisosAr: avisosAr ?? this.avisosAr,
       );
 
   @override
@@ -171,7 +191,9 @@ class Painel extends Equatable {
         alertas,
         seguidas,
         atualizadoEm,
-        bancoSemViewsV3
+        bancoSemViewsV3,
+        chuvaColetadaEm,
+        avisosAr
       ];
 }
 
@@ -290,6 +312,7 @@ class PainelCubit extends Cubit<Painel> {
         _dados.alertas(),
         tudo ? _dados.regioesSeguidas() : Future.value(state.seguidas),
         _dados.chuvaUltimaColeta(),
+        _dados.avisosAr(),
       ]);
       final regioes = resultados[0] as List<Regiao>;
       final estacoes = resultados[2] as List<Estacao>;
@@ -308,6 +331,7 @@ class PainelCubit extends Cubit<Painel> {
         atualizadoEm: DateTime.now(),
         bancoSemViewsV3: !_dados.viewsV3Disponiveis,
         chuvaColetadaEm: resultados[5] as DateTime?,
+        avisosAr: resultados[6] as List<AvisoAr>,
       ));
     } catch (_) {
       emit(state.copyWith(

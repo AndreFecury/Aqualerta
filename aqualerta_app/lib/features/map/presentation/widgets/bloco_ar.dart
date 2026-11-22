@@ -102,9 +102,22 @@ class BlocoAr extends StatelessWidget {
     final aviso = context
         .watch<PainelCubit>()
         .state
-        .ativos
-        .where((a) => a.ehAr && a.regiaoId == regiaoId)
+        .avisosArAtivos
+        .where((a) => a.regiaoId == regiaoId)
         .firstOrNull;
+
+    // O aviso vem do sensor: aparece mesmo sem estimativa do modelo.
+    final botaoAviso = <Widget>[
+      if (aviso != null)
+        Align(
+          alignment: Alignment.centerLeft,
+          child: TextButton(
+            onPressed: () => context.push('/alerts/${aviso.id}'),
+            key: const Key('ver-aviso-ar'),
+            child: Text('Ver aviso: ${aviso.titulo.toLowerCase()} (sensor)'),
+          ),
+        ),
+    ];
 
     final titulo = Row(
       children: [
@@ -149,6 +162,7 @@ class BlocoAr extends StatelessWidget {
         Text('Sem estimativa de qualidade do ar para esta região agora.',
             style: t.bodyMedium),
         ...sensorPerto,
+        ...botaoAviso,
       ];
     } else {
       final nivel = r.nivel!;
@@ -200,14 +214,7 @@ class BlocoAr extends StatelessWidget {
           Text(nivel.saude!, style: t.bodyMedium),
         ],
         ...sensorPerto,
-        if (aviso != null)
-          Align(
-            alignment: Alignment.centerLeft,
-            child: TextButton(
-              onPressed: () => context.push('/alerts/${aviso.id}'),
-              child: const Text('Ver aviso de qualidade do ar'),
-            ),
-          ),
+        ...botaoAviso,
         const SizedBox(height: 6),
         Text(
             'Estimativa de modelo, não medição local. '

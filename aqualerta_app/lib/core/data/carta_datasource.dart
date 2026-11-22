@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:latlong2/latlong.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:aqualerta/core/domain/ar.dart';
 import 'package:aqualerta/core/domain/carta.dart';
 import 'package:aqualerta/core/domain/severidade.dart';
 
@@ -172,6 +173,26 @@ class CartaDatasource {
 
   /// Última coleta bem-sucedida dos pluviômetros do CEMADEN (tabela
   /// chuva_estado). `null` se a coleta ainda não existe no banco ou falhou.
+  /// Avisos de ar pelo sensor: ativos e os encerrados nos últimos 90 dias.
+  /// Sem a tabela (banco antigo) ou sem rede, lista vazia.
+  Future<List<AvisoAr>> avisosAr() async {
+    try {
+      final desde = DateTime.now()
+          .subtract(const Duration(days: 90))
+          .toUtc()
+          .toIso8601String();
+      final linhas = await _c
+          .from('ar_avisos')
+          .select()
+          .or('situacao.eq.ativo,inicio.gte.$desde')
+          .order('inicio', ascending: false)
+          .limit(100);
+      return [for (final l in linhas) AvisoAr.doJson(l)];
+    } catch (_) {
+      return const [];
+    }
+  }
+
   Future<DateTime?> chuvaUltimaColeta() async {
     try {
       final r = await _c

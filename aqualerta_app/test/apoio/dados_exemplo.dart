@@ -1,6 +1,7 @@
 import 'package:latlong2/latlong.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:aqualerta/core/data/carta_datasource.dart';
+import 'package:aqualerta/core/domain/ar.dart';
 import 'package:aqualerta/core/domain/carta.dart';
 import 'package:aqualerta/core/domain/severidade.dart';
 
@@ -137,6 +138,12 @@ class CartaFalsa extends CartaDatasource {
   /// Sem coleta de chuva no banco de exemplo.
   @override
   Future<DateTime?> chuvaUltimaColeta() async => null;
+
+  /// Avisos de ar devolvidos pelo falso (padrão: nenhum).
+  List<AvisoAr> avisosArFalsos = const [];
+
+  @override
+  Future<List<AvisoAr>> avisosAr() async => avisosArFalsos;
 
   @override
   Future<void> seguir(String regiaoId, {required bool seguir}) async {}

@@ -53,6 +53,10 @@ class _DetalheAlertaScreenState extends State<DetalheAlertaScreen> {
     final c = AquaColors.of(context);
     final t = Theme.of(context).textTheme;
 
+    final avisoAr = alerta == null ? painel.avisoAr(widget.alertaId) : null;
+    if (avisoAr != null) {
+      return DetalheAvisoAr(aviso: avisoAr);
+    }
     if (alerta == null) {
       return Scaffold(
         appBar: AppBar(title: const Text('Alerta')),
@@ -305,6 +309,67 @@ class _MiniCarta extends StatelessWidget {
           RichAttributionWidget(
               showFlutterMapAttribution: false,
               attributions: [TextSourceAttribution(fundo.atribuicao)]),
+        ],
+      ),
+    );
+  }
+}
+
+/// Detalhe de um aviso de qualidade do ar pelo sensor.
+class DetalheAvisoAr extends StatelessWidget {
+  const DetalheAvisoAr({required this.aviso, super.key});
+  final AvisoAr aviso;
+
+  String _quando(DateTime d) {
+    final m = d.toUtc().subtract(const Duration(hours: 4));
+    String dois(int v) => v.toString().padLeft(2, '0');
+    return '${dois(m.day)}/${dois(m.month)} às ${dois(m.hour)}:${dois(m.minute)}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context).textTheme;
+    final painel = context.watch<PainelCubit>().state;
+    final regiao = painel.regiao(aviso.regiaoId)?.nome ?? 'a região';
+    final nivel = aviso.nivel;
+    return Scaffold(
+      appBar: AppBar(title: const Text('Qualidade do ar')),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+        children: [
+          SeloAr(nivel: nivel, grande: true),
+          const SizedBox(height: 12),
+          Text('${aviso.titulo} em $regiao',
+              style: t.titleLarge, key: const Key('aviso-ar-titulo')),
+          const SizedBox(height: 4),
+          Text(
+              aviso.ativo
+                  ? 'Ativo desde ${_quando(aviso.inicio)}.'
+                  : 'De ${_quando(aviso.inicio)} a ${aviso.fim != null ? _quando(aviso.fim!) : '?'}'
+                      '${aviso.motivoFim != null ? ': ${aviso.motivoFim}' : ''}.',
+              style: t.bodyMedium),
+          const SizedBox(height: 12),
+          Text(
+              'O sensor perto de $regiao mediu partículas finas (MP2,5) acima de '
+              '${aviso.limite.toStringAsFixed(0)} µg/m³ por pelo menos 2 horas seguidas'
+              '${aviso.nowcastAtual != null ? ' (agora ${aviso.nowcastAtual!.toStringAsFixed(0)} µg/m³' : ''}'
+              '${aviso.nowcastMax != null ? ', o maior desde o início: ${aviso.nowcastMax!.toStringAsFixed(0)} µg/m³' : ''}'
+              '${aviso.nowcastAtual != null ? ')' : ''}.',
+              style: t.bodyMedium),
+          if (nivel.saude != null) ...[
+            const SizedBox(height: 12),
+            Text(nivel.saude!, style: t.bodyMedium),
+          ],
+          const SizedBox(height: 16),
+          Text('Sobre este aviso', style: t.titleSmall),
+          const SizedBox(height: 4),
+          Text(
+              'É um índice em tempo quase real (média ponderada das últimas '
+              '12 h, método NowCast da agência ambiental dos EUA), não o índice '
+              'oficial do MMA, que usa a média de 24 h. O sensor é um aparelho '
+              'de baixo custo, via OpenAQ, não um monitor oficial. O aviso '
+              'termina depois de 3 horas seguidas abaixo do limite.',
+              style: t.bodySmall),
         ],
       ),
     );
