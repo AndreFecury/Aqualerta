@@ -9,7 +9,7 @@ class PreferenciasNotificacao extends Equatable {
     this.ativas = true,
     this.som = true,
     this.severidadeMinima = Severidade.medio,
-    this.ar = true,
+    this.ar = false,
   });
 
   final bool ativas;
@@ -37,7 +37,10 @@ class PreferenciasNotificacao extends Equatable {
         'push': ativas,
         'sound': som,
         'min_severity': severidadeMinima.codigo,
+        // O servidor só lê "ar_optin" (migração 20261125a); "ar" fica igual
+        // para apps antigos lerem a mesma coisa.
         'ar': ar,
+        'ar_optin': ar,
       };
 
   @override
@@ -57,7 +60,9 @@ class NotificacoesCubit extends Cubit<PreferenciasNotificacao> {
   static const _kAtivas = 'avisos.ativos';
   static const _kSom = 'avisos.som';
   static const _kMinima = 'avisos.minima';
-  static const _kAr = 'avisos.ar';
+  // Chave nova (22/11/2026): o "ligado" antigo não é herdado; o padrão é
+  // desligado até o usuário escolher.
+  static const _kAr = 'avisos.ar_optin';
 
   static PreferenciasNotificacao _ler(SharedPreferences p) =>
       PreferenciasNotificacao(
@@ -65,7 +70,7 @@ class NotificacoesCubit extends Cubit<PreferenciasNotificacao> {
         som: p.getBool(_kSom) ?? true,
         severidadeMinima: Severidade.doCodigo(
             p.getString(_kMinima) ?? Severidade.medio.codigo),
-        ar: p.getBool(_kAr) ?? true,
+        ar: p.getBool(_kAr) ?? false,
       );
 
   Future<void> definirAtivas(bool v) => _salvar(state.copyWith(ativas: v));

@@ -412,30 +412,6 @@ class _MapaScreenState extends State<MapaScreen>
                                       TileUpdateTransformers.throttle(
                                           const Duration(milliseconds: 250)),
                                 ),
-                              // Por baixo de tudo: só o preenchimento muda de
-                              // cor; o contorno continua sendo o risco de cheia.
-                              if (estadoAr != null)
-                                PolygonLayer(
-                                  key: const ValueKey('camada-ar'),
-                                  polygons: [
-                                    for (final r in painel.regioes)
-                                      if (estadoAr.de(r.id)?.nivel
-                                          case final nivel?)
-                                        for (final anel in r.contornos)
-                                          if (anel.length >= 3)
-                                            Polygon(
-                                              points: anel,
-                                              color: nivel
-                                                  .cor(brilho)
-                                                  .withValues(alpha: 0.32),
-                                              borderColor: nivel.cor(brilho),
-                                              borderStrokeWidth: exibicao
-                                                      .mostra(Camada.regioes)
-                                                  ? 0
-                                                  : 1.8,
-                                            ),
-                                  ],
-                                ),
                               if (areasSatelite.isNotEmpty)
                                 PolygonLayer(
                                   key: const ValueKey('camada-satelite'),
@@ -488,15 +464,22 @@ class _MapaScreenState extends State<MapaScreen>
                                         ),
                                 ]),
                               MarkerLayer(markers: [
-                                if (exibicao.mostra(Camada.regioes))
+                                if (exibicao.mostra(Camada.regioes) ||
+                                    estadoAr != null)
                                   for (final r in painel.regioes)
                                     if (r.centro != null)
                                       Marker(
                                         point: r.centro!,
-                                        width: 124,
-                                        height: 48, // área de toque mínima
+                                        width: estadoAr != null ? 168 : 124,
+                                        // área de toque mínima; mais alto com a linha do ar
+                                        height: estadoAr != null ? 72 : 48,
                                         child: _MarcaRegiao(
                                           regiao: r,
+                                          mostraRisco:
+                                              exibicao.mostra(Camada.regioes),
+                                          ar: estadoAr?.de(r.id),
+                                          arCarregando: estadoAr?.situacao ==
+                                              SituacaoAr.carregando,
                                           severidade:
                                               painel.severidadeDaRegiao(r.id),
                                           estacao:
@@ -750,8 +733,18 @@ class _MarcaRegiao extends StatefulWidget {
     required this.estacao,
     required this.selecionada,
     required this.aoTocar,
+    this.mostraRisco = true,
+    this.ar,
+    this.arCarregando = false,
   });
   final Regiao regiao;
+
+  /// Com a camada de regiões desligada, o marcador mostra só nome e ar.
+  final bool mostraRisco;
+
+  /// Qualidade do ar da região (camada ligada); null = camada desligada.
+  final ResumoAr? ar;
+  final bool arCarregando;
   final Severidade severidade;
   final Estacao? estacao;
   final bool selecionada;
@@ -780,10 +773,12 @@ class _MarcaRegiaoState extends State<_MarcaRegiao> {
     final nivel = (estacao?.leituraRecente() ?? false)
         ? '${formatarMetros(estacao!.nivel!)} m'
         : null;
+    final linhaAr = textoSeloAr(widget.ar, carregando: widget.arCarregando);
     return Semantics(
       button: true,
       label:
-          '${regiao.nome}: risco ${severidade.rotulo.toLowerCase()}${nivel != null ? ', rio a $nivel' : ''}',
+          '${regiao.nome}: risco ${severidade.rotulo.toLowerCase()}${nivel != null ? ', rio a $nivel' : ''}'
+          '${linhaAr != null ? ', qualidade do ar: $linhaAr' : ''}',
       excludeSemantics: true,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque, // os 48 de altura inteiros tocam
@@ -815,18 +810,51 @@ class _MarcaRegiaoState extends State<_MarcaRegiao> {
                       width: selecionada ? 2.5 : 1),
                   boxShadow: [BoxShadow(color: c.sombra, blurRadius: 6)],
                 ),
-                child: Row(
+                child: Column(
                   mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    ClipRRect(
-                        borderRadius: BorderRadius.circular(14),
-                        child: AmostraHachura(
-                            severidade: severidade, tamanho: 24)),
-                    const SizedBox(width: 6),
-                    Text(nivel ?? regiao.nome,
-                        style: t.labelMedium!.copyWith(
-                            color: c.tinta, fontWeight: FontWeight.w700),
-                        textScaler: TextScaler.noScaling),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (widget.mostraRisco) ...[
+                          ClipRRect(
+                              borderRadius: BorderRadius.circular(14),
+                              child: AmostraHachura(
+                                  severidade: severidade, tamanho: 24)),
+                          const SizedBox(width: 6),
+                        ],
+                        Text(nivel ?? regiao.nome,
+                            style: t.labelMedium!.copyWith(
+                                color: c.tinta, fontWeight: FontWeight.w700),
+                            textScaler: TextScaler.noScaling),
+                      ],
+                    ),
+                    if (linhaAr != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 3, left: 2),
+                        child: Row(
+                          key: ValueKey('selo-ar-${regiao.id}'),
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (widget.ar?.nivel case final n?)
+                              Container(
+                                width: 10,
+                                height: 10,
+                                decoration: BoxDecoration(
+                                  color: n.cor(Theme.of(context).brightness),
+                                  borderRadius: BorderRadius.circular(2),
+                                ),
+                              )
+                            else
+                              Icon(Icons.air, size: 12, color: c.tinta2),
+                            const SizedBox(width: 5),
+                            Text(linhaAr,
+                                style: t.labelSmall!.copyWith(color: c.tinta),
+                                textScaler: TextScaler.noScaling),
+                          ],
+                        ),
+                      ),
                   ],
                 ),
               ),
@@ -1357,11 +1385,24 @@ class _LegendaSatelite extends StatelessWidget {
   }
 }
 
-/// Legenda da camada de qualidade do ar: as cinco cores do IQAr (MMA), da
-/// boa à péssima, e quando o modelo foi atualizado.
+/// "Ar 54 · Moderada". Em região só com modelo, em época de fumaça ou com
+/// muitos focos, "Boa" nunca aparece sozinho: "Boa (estimativa)".
+String? textoSeloAr(ResumoAr? ar, {bool carregando = false}) {
+  if (ar == null) return carregando ? 'Ar …' : null;
+  final n = ar.nivel;
+  if (n == null) return 'Ar sem estimativa';
+  final cautela = n == NivelAr.n1 && (ar.contexto?.cautelaBoa ?? false);
+  return 'Ar ${ar.iqar} · ${n.nome}${cautela ? ' (estimativa)' : ''}';
+}
+
+/// Legenda da camada de qualidade do ar: as faixas do índice (IQAr do MMA)
+/// com a cor de cada uma, e quando o modelo foi atualizado.
 class _LegendaAr extends StatelessWidget {
   const _LegendaAr({required this.estado});
   final EstadoAr estado;
+
+  static String faixa(NivelAr n) =>
+      n == NivelAr.n5 ? 'acima de 200' : '${n.de} a ${n.ate}';
 
   @override
   Widget build(BuildContext context) {
@@ -1384,33 +1425,48 @@ class _LegendaAr extends StatelessWidget {
       SituacaoAr.carregando => 'carregando…',
     };
     return Semantics(
-      label: 'Legenda: a cor da região é a qualidade do ar estimada pelo '
-          'modelo, de boa, mais clara, a péssima, mais escura; $detalhe',
+      label: 'Legenda da qualidade do ar, índice estimado pelo modelo: '
+          '${NivelAr.values.map((n) => '${n.nome} ${faixa(n)}').join(', ')}; $detalhe',
       excludeSemantics: true,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        constraints: const BoxConstraints(maxWidth: 240),
+        padding: const EdgeInsets.fromLTRB(10, 6, 10, 8),
+        constraints: const BoxConstraints(maxWidth: 220),
         decoration: BoxDecoration(
           color: c.papel.withValues(alpha: 0.94),
           borderRadius: BorderRadius.circular(10),
           border: Border.all(color: c.linha),
           boxShadow: [BoxShadow(color: c.sombra, blurRadius: 8)],
         ),
-        child: Row(
+        child: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            Text('Ar (modelo) · $detalhe',
+                style: t.labelSmall!.copyWith(fontWeight: FontWeight.w700),
+                overflow: TextOverflow.ellipsis),
+            const SizedBox(height: 4),
             for (final n in NivelAr.values)
-              Container(
-                key: ValueKey('legenda-ar-${n.name}'),
-                width: 10,
-                height: 14,
-                color: n.cor(brilho),
+              Padding(
+                padding: const EdgeInsets.only(top: 2),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      key: ValueKey('legenda-ar-${n.name}'),
+                      width: 12,
+                      height: 12,
+                      decoration: BoxDecoration(
+                        color: n.cor(brilho),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Flexible(
+                        child: Text('${n.nome} · ${faixa(n)}',
+                            style: t.labelSmall)),
+                  ],
+                ),
               ),
-            const SizedBox(width: 8),
-            Flexible(
-              child: Text('Ar (modelo) · $detalhe',
-                  style: t.labelSmall, overflow: TextOverflow.ellipsis),
-            ),
           ],
         ),
       ),

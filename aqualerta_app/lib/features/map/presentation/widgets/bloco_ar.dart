@@ -45,14 +45,22 @@ class BlocoAr extends StatelessWidget {
       });
     }
     final r = estado.de(regiaoId);
-    final local = r?.local;
-    final medicaoLocal = <Widget>[
-      if (local != null) ...[
+    final ctx = r?.contexto;
+    final comparacao = ctx?.fraseComparacao;
+    final divergencia = ctx?.fraseDivergencia;
+    final fonteSensor = ctx == null || !ctx.temSensor
+        ? null
+        : '${ctx.sensorProvedor ?? 'sensor'}'
+            '${ctx.sensorDistanciaKm != null ? ', a ${ctx.sensorDistanciaKm} km' : ''}';
+    // Fase 4: as duas leituras lado a lado, sem dizer quem acertou.
+    final sensorPerto = <Widget>[
+      if (comparacao != null) ...[
         const SizedBox(height: 8),
         Semantics(
-          label: 'Medição local: ${local.frase}',
+          label: '$comparacao. ${divergencia ?? ''}',
           excludeSemantics: true,
           child: Row(
+            key: const Key('ar-comparacao'),
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Padding(
@@ -61,25 +69,36 @@ class BlocoAr extends StatelessWidget {
               ),
               const SizedBox(width: 6),
               Expanded(
-                child: Text.rich(
-                  TextSpan(children: [
-                    TextSpan(
-                        text: 'Medição local: ',
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('$comparacao.',
                         style: t.bodyMedium
                             ?.copyWith(fontWeight: FontWeight.w600)),
-                    TextSpan(text: local.frase, style: t.bodyMedium),
-                    TextSpan(
-                        text: '\nFonte: ${local.fontes ?? 'OpenAQ'}'
-                            '${local.atualizadoEm != null ? ' · até ${horaManaus(local.atualizadoEm!)}' : ''}.',
+                    if (divergencia != null)
+                      Text(divergencia, style: t.bodyMedium),
+                    Text(
+                        'Médias das últimas 24 h. O sensor é um aparelho de '
+                        'baixo custo ($fonteSensor, via OpenAQ), não um monitor '
+                        'oficial; o modelo é o CAMS.',
                         style: t.bodySmall),
-                  ]),
+                  ],
                 ),
               ),
             ],
           ),
         ),
+      ] else if (fonteSensor != null) ...[
+        const SizedBox(height: 6),
+        Text(
+            ctx!.sensorSituacao == 'parado'
+                ? 'Há um sensor perto ($fonteSensor), sem leituras recentes.'
+                : 'Há um sensor perto ($fonteSensor), ainda sem dias '
+                    'suficientes para comparar com o modelo.',
+            style: t.bodySmall),
       ],
     ];
+    final cautela = ctx != null && ctx.cautelaBoa;
     final aviso = context
         .watch<PainelCubit>()
         .state
@@ -129,13 +148,19 @@ class BlocoAr extends StatelessWidget {
       corpo = [
         Text('Sem estimativa de qualidade do ar para esta região agora.',
             style: t.bodyMedium),
-        ...medicaoLocal,
+        ...sensorPerto,
       ];
     } else {
       final nivel = r.nivel!;
       final prev = r.previsto48h;
       corpo = [
         SeloAr(nivel: nivel, indice: r.iqar, grande: true),
+        if (cautela && nivel == NivelAr.n1) ...[
+          const SizedBox(height: 6),
+          Text(textoCautelaBoa,
+              key: const Key('ar-cautela-boa'),
+              style: t.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
+        ],
         const SizedBox(height: 6),
         Text(
             'Puxado por ${ResumoAr.nomePoluente(r.poluente)}'
@@ -157,22 +182,24 @@ class BlocoAr extends StatelessWidget {
               ].join('; '),
               style: t.bodySmall),
         ],
-        if (r.fumacaProvavel) ...[
+        if (r.focos24h > 0) ...[
           const SizedBox(height: 6),
           Text(
-              '${r.focos24h} focos de queimada a até 100 km nas últimas 24 h e o '
-              'modelo indica mais partículas no ar: a fumaça pode ser a causa.',
+              '${r.focos24h} focos de queimada a até 100 km nas últimas 24 h (INPE).',
               style: t.bodyMedium),
-        ] else if (r.focos24h > 0) ...[
-          const SizedBox(height: 4),
-          Text('${r.focos24h} focos de queimada a até 100 km nas últimas 24 h.',
+        ],
+        if (r.focos24h > 0 || (ctx?.epocaFumaca ?? false)) ...[
+          const SizedBox(height: 2),
+          Text(
+              'A fumaça também pode vir de queimadas distantes, a centenas '
+              'de quilômetros.',
               style: t.bodySmall),
         ],
         if (nivel.saude != null) ...[
           const SizedBox(height: 6),
           Text(nivel.saude!, style: t.bodyMedium),
         ],
-        ...medicaoLocal,
+        ...sensorPerto,
         if (aviso != null)
           Align(
             alignment: Alignment.centerLeft,

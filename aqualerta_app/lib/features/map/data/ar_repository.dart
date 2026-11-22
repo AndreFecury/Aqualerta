@@ -26,15 +26,15 @@ class ArRepository implements FonteAr {
     final resumos = [
       for (final l in linhas) ResumoAr.doJson(l as Map<String, dynamic>)
     ];
-    // Sensores locais (OpenAQ) são um extra: sem eles, segue só o modelo.
-    final locais = <String, MedicaoLocalAr>{};
+    // Contexto (sensor, comparação, cautela) é um extra: sem ele, só o modelo.
+    final contextos = <String, ContextoAr>{};
     try {
-      for (final l in await _c.rpc('ar_local') as List) {
-        final m = MedicaoLocalAr.doJson(l as Map<String, dynamic>);
-        if (m != null) locais[m.regiaoId] = m;
+      for (final l in await _c.rpc('ar_contexto') as List) {
+        final m = ContextoAr.doJson(l as Map<String, dynamic>);
+        contextos[m.regiaoId] = m;
       }
     } catch (_) {}
-    return [for (final r in resumos) r.comLocal(locais[r.regiaoId])];
+    return [for (final r in resumos) r.comContexto(contextos[r.regiaoId])];
   }
 
   @override

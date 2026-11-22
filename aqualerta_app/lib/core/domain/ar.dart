@@ -69,15 +69,15 @@ class ResumoAr {
     this.focos24h = 0,
     this.fumacaProvavel = false,
     this.atualizadoEm,
-    this.local,
+    this.contexto,
   });
 
   final String regiaoId;
 
-  /// Medição de sensores reais perto da região (OpenAQ), quando houver.
-  final MedicaoLocalAr? local;
+  /// Sensor perto, comparação e cautela (RPC ar_contexto).
+  final ContextoAr? contexto;
 
-  ResumoAr comLocal(MedicaoLocalAr? m) => ResumoAr(
+  ResumoAr comContexto(ContextoAr? m) => ResumoAr(
         regiaoId: regiaoId,
         hora: hora,
         iqar: iqar,
@@ -89,7 +89,7 @@ class ResumoAr {
         focos24h: focos24h,
         fumacaProvavel: fumacaProvavel,
         atualizadoEm: atualizadoEm,
-        local: m,
+        contexto: m,
       );
 
   /// Hora (UTC) a que o índice se refere.
@@ -147,53 +147,113 @@ class ResumoAr {
       );
 }
 
-/// MP2,5 medido por sensores perto da região (RPC `ar_local`, dados da
-/// OpenAQ). Média de 24 h, só com sensores que cobrem ao menos 18 horas.
-class MedicaoLocalAr {
-  const MedicaoLocalAr({
+/// Contexto do ar de uma região (RPC `ar_contexto`, migração
+/// 20261126a_ar_contexto.sql): sensor perto, comparação sensor × modelo,
+/// divergência e quando o "Boa" do modelo precisa de cautela.
+class ContextoAr {
+  const ContextoAr({
     required this.regiaoId,
-    required this.pm25Media24h,
-    required this.iqar,
-    required this.sensores,
-    this.distanciaKm,
-    this.fontes,
-    this.atualizadoEm,
+    this.temSensor = false,
+    this.sensorNome,
+    this.sensorProvedor,
+    this.sensorDistanciaKm,
+    this.sensorSituacao,
+    this.comparacaoOk = false,
+    this.sensorPm25,
+    this.sensorNivel,
+    this.modeloPm25,
+    this.modeloNivel,
+    this.sensorPior = false,
+    this.modeloPior = false,
+    this.epocaFumaca = false,
+    this.focos300km72h = 0,
+    this.cautelaBoa = false,
+    this.avisoSensorLigado = false,
   });
 
   final String regiaoId;
-  final double pm25Media24h;
-  final int iqar;
-  final int sensores;
-  final int? distanciaKm;
-  final String? fontes;
-  final DateTime? atualizadoEm;
+  final bool temSensor;
+  final String? sensorNome;
+  final String? sensorProvedor;
+  final int? sensorDistanciaKm;
 
-  NivelAr get nivel => NivelAr.doIndice(iqar);
+  /// 'saudável', 'cobertura baixa' ou 'parado' (null sem sensor).
+  final String? sensorSituacao;
 
-  static MedicaoLocalAr? doJson(Map<String, dynamic> j) {
-    final pm = (j['pm25_24h'] as num?)?.toDouble();
-    final iqar = (j['iqar'] as num?)?.toInt();
-    if (pm == null || iqar == null) return null;
-    return MedicaoLocalAr(
-      regiaoId: j['region_id'] as String,
-      pm25Media24h: pm,
-      iqar: iqar,
-      sensores: (j['sensores'] as num?)?.toInt() ?? 1,
-      distanciaKm: (j['distancia_km'] as num?)?.round(),
-      fontes: j['fontes'] as String?,
-      atualizadoEm: j['atualizado_em'] == null
-          ? null
-          : DateTime.parse(j['atualizado_em'] as String),
-    );
+  /// Há dias suficientes e o sensor está saudável: mostrar as duas leituras.
+  final bool comparacaoOk;
+
+  /// Médias das últimas 24 h (só com [comparacaoOk]).
+  final double? sensorPm25;
+  final NivelAr? sensorNivel;
+  final double? modeloPm25;
+  final NivelAr? modeloNivel;
+
+  /// Sensor 2+ níveis pior que o modelo hoje (frase desde o 1º dia).
+  final bool sensorPior;
+
+  /// Modelo pior que o sensor há 5 dias seguidos.
+  final bool modeloPior;
+  final bool epocaFumaca;
+  final int focos300km72h;
+
+  /// Região só com modelo em época de fumaça ou com muitos focos: "Boa"
+  /// nunca aparece sozinho.
+  final bool cautelaBoa;
+  final bool avisoSensorLigado;
+
+  static NivelAr? _nivel(Object? v) => switch (v) {
+        'N1' => NivelAr.n1,
+        'N2' => NivelAr.n2,
+        'N3' => NivelAr.n3,
+        'N4' => NivelAr.n4,
+        'N5' => NivelAr.n5,
+        _ => null,
+      };
+
+  factory ContextoAr.doJson(Map<String, dynamic> j) => ContextoAr(
+        regiaoId: j['region_id'] as String,
+        temSensor: j['tem_sensor'] as bool? ?? false,
+        sensorNome: j['sensor_nome'] as String?,
+        sensorProvedor: j['sensor_provedor'] as String?,
+        sensorDistanciaKm: (j['sensor_distancia_km'] as num?)?.round(),
+        sensorSituacao: j['sensor_situacao'] as String?,
+        comparacaoOk: j['comparacao_ok'] as bool? ?? false,
+        sensorPm25: (j['sensor_pm25_24h'] as num?)?.toDouble(),
+        sensorNivel: _nivel(j['sensor_nivel']),
+        modeloPm25: (j['modelo_pm25_24h'] as num?)?.toDouble(),
+        modeloNivel: _nivel(j['modelo_nivel']),
+        sensorPior: j['sensor_pior'] as bool? ?? false,
+        modeloPior: j['modelo_pior'] as bool? ?? false,
+        epocaFumaca: j['epoca_fumaca'] as bool? ?? false,
+        focos300km72h: (j['focos_300km_72h'] as num?)?.toInt() ?? 0,
+        cautelaBoa: j['cautela_boa'] as bool? ?? false,
+        avisoSensorLigado: j['aviso_sensor_ligado'] as bool? ?? false,
+      );
+
+  static String _ug(double v) => v.toStringAsFixed(0);
+
+  /// "Sensor perto: Moderada (31 µg/m³). Modelo: Boa". Sem dizer quem acertou.
+  String? get fraseComparacao {
+    if (!comparacaoOk || sensorNivel == null || modeloNivel == null)
+      return null;
+    return 'Sensor perto: ${sensorNivel!.nome} (${_ug(sensorPm25!)} µg/m³). '
+        'Modelo: ${modeloNivel!.nome}';
   }
 
-  /// "MP2,5 de 21,3 µg/m³ na média de 24 h (moderada, índice 41), 1 sensor
-  /// a até 4 km."
-  String get frase {
-    final pm = pm25Media24h.toStringAsFixed(1).replaceAll('.', ',');
-    final onde = sensores == 1 ? '1 sensor' : '$sensores sensores';
-    final dist = distanciaKm == null ? '' : ' a até $distanciaKm km';
-    return 'MP2,5 de $pm µg/m³ na média de 24 h '
-        '(${nivel.nome.toLowerCase()}, índice $iqar), $onde$dist.';
+  String? get fraseDivergencia {
+    if (sensorPior) {
+      return 'Hoje o sensor perto indica ar bem pior que a estimativa do modelo.';
+    }
+    if (modeloPior) {
+      return 'Há alguns dias a estimativa do modelo indica ar pior que o sensor perto.';
+    }
+    return null;
   }
 }
+
+/// Texto obrigatório quando o modelo diz "Boa" numa região só com modelo em
+/// época de fumaça ou com muitos focos (decisão de 22/11/2026).
+const textoCautelaBoa =
+    'O modelo costuma subestimar fumaça forte; se há cheiro de queimado ou '
+    'céu encoberto, trate o ar como ruim.';

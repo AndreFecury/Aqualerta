@@ -128,19 +128,69 @@ class PerfilScreen extends StatelessWidget {
                       ? context.read<NotificacoesCubit>().definirSom
                       : null,
                 ),
-                SwitchListTile(
-                  key: const Key('avisos-ar'),
-                  contentPadding: EdgeInsets.zero,
-                  title: Text('Qualidade do ar', style: t.titleSmall),
-                  subtitle: Text(
-                      'Avisar quando o ar ficar muito ruim ou péssimo '
-                      '(fumaça de queimadas). Não muda os avisos de cheia',
-                      style: t.bodySmall),
-                  value: avisos.ar,
-                  onChanged: avisos.ativas
-                      ? context.read<NotificacoesCubit>().definirAr
-                      : null,
-                ),
+                // Aviso de ar só existe onde há sensor perto e depois de validado
+                // (decisões de 22/11/2026). Sem região com aviso ligado, a chave
+                // não aparece; o texto diz onde há sensor.
+                Builder(builder: (context) {
+                  final cubitAr = context.watch<ArCubit>();
+                  if (cubitAr.vencido &&
+                      cubitAr.state.situacao != SituacaoAr.erro) {
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      if (context.mounted) context.read<ArCubit>().carregar();
+                    });
+                  }
+                  final ar = cubitAr.state;
+                  final contextos = [
+                    for (final r in ar.regioes.values)
+                      if (r.contexto != null) r.contexto!
+                  ];
+                  String nome(String id) => painel.regiao(id)?.nome ?? 'região';
+                  final comSensor = [
+                    for (final x in contextos)
+                      if (x.temSensor) nome(x.regiaoId)
+                  ]..sort();
+                  final ligadas = [
+                    for (final x in contextos)
+                      if (x.avisoSensorLigado) nome(x.regiaoId)
+                  ]..sort();
+                  final textoSensores = comSensor.isEmpty
+                      ? 'Nenhuma região tem sensor de qualidade do ar perto; '
+                          'o app mostra só a estimativa do modelo.'
+                      : 'Sensor de qualidade do ar perto: ${comSensor.join(', ')}. '
+                          'Nas outras regiões, só a estimativa do modelo, sem aviso.';
+                  if (ligadas.isEmpty) {
+                    return Padding(
+                      key: const Key('avisos-ar-texto'),
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Qualidade do ar', style: t.titleSmall),
+                          const SizedBox(height: 2),
+                          Text(
+                              'Avisos de qualidade do ar ainda desligados: só '
+                              'vão existir onde há sensor perto e depois de '
+                              'validados. $textoSensores',
+                              style: t.bodySmall),
+                        ],
+                      ),
+                    );
+                  }
+                  return SwitchListTile(
+                    key: const Key('avisos-ar'),
+                    contentPadding: EdgeInsets.zero,
+                    title: Text('Qualidade do ar', style: t.titleSmall),
+                    subtitle: Text(
+                        'Avisar quando o sensor perto indicar ar muito ruim '
+                        '(${ligadas.join(', ')}). $textoSensores '
+                        'Não muda os avisos de cheia.',
+                        style: t.bodySmall),
+                    value: avisos.ar,
+                    onChanged: avisos.ativas
+                        ? context.read<NotificacoesCubit>().definirAr
+                        : null,
+                  );
+                }),
                 const SizedBox(height: 8),
                 Text('Avisar a partir de', style: t.titleSmall),
                 const SizedBox(height: 8),

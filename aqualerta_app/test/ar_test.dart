@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:aqualerta/core/config/mapas.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -157,14 +156,15 @@ void main() {
           findsOneWidget);
     });
 
-    testWidgets('fumaça provável aparece com o número de focos', (t) async {
+    testWidgets('focos como fato separado, sem afirmar a causa', (t) async {
       await montar(t, const MapaScreen(),
           ar: ArFixo([ResumoAr.doJson(_linha(fumaca: true, focos: 12))]));
       await t.pump(const Duration(milliseconds: 100));
-      await t.scrollUntilVisible(
-          find.textContaining('a fumaça pode ser a causa'), 200,
-          scrollable: _rolavel());
-      expect(find.textContaining('12 focos de queimada'), findsOneWidget);
+      final focos = find
+          .text('12 focos de queimada a até 100 km nas últimas 24 h (INPE).');
+      await t.scrollUntilVisible(focos, 200, scrollable: _rolavel());
+      expect(find.textContaining('queimadas distantes'), findsOneWidget);
+      expect(find.textContaining('pode ser a causa'), findsNothing);
     });
 
     testWidgets('sem estimativa: diz que não há, sem inventar', (t) async {
@@ -199,71 +199,56 @@ void main() {
 
   group('Camada no mapa', () {
     setUp(() => FundoMapa.desligado = true);
+    const ligada = {
+      'mapa.camadas': ['regioes', 'qualidadeAr'],
+    };
 
-    testWidgets('desligada por padrão: nada pintado e sem legenda', (t) async {
+    testWidgets('desligada por padrão: sem selo e sem legenda', (t) async {
       await montar(t, const MapaScreen(),
           ar: ArFixo([ResumoAr.doJson(_linha())]));
       await t.pump(const Duration(milliseconds: 100));
-      expect(find.byKey(const ValueKey('camada-ar')), findsNothing);
+      expect(find.byKey(const ValueKey('selo-ar-r-compensa')), findsNothing);
       expect(find.textContaining('Ar (modelo)'), findsNothing);
     });
 
-    testWidgets('ligada: pinta a região com a cor do IQAr e mostra a legenda',
-        (t) async {
+    testWidgets(
+        'ligada: selo com número e nível no marcador, sem pintar o município, '
+        'legenda com as faixas', (t) async {
       await montar(t, const MapaScreen(),
-          ar: ArFixo([ResumoAr.doJson(_linha())]),
-          preferencias: {
-            'mapa.camadas': ['regioes', 'qualidadeAr'],
-          });
+          ar: ArFixo([ResumoAr.doJson(_linha())]), preferencias: ligada);
       await t.pump(const Duration(milliseconds: 100));
       await t.pump(const Duration(milliseconds: 100));
-      final camada =
-          t.widget<PolygonLayer>(find.byKey(const ValueKey('camada-ar')));
-      // Só a região com estimativa (r-compensa) é pintada.
-      expect(camada.polygons, isNotEmpty);
-      final cor = NivelAr.n2.cor(Brightness.light);
-      for (final p in camada.polygons) {
-        expect(p.borderColor, cor);
-        expect(p.color, cor.withValues(alpha: 0.32));
-        expect(p.borderStrokeWidth, 0,
-            reason: 'com as regiões ligadas, o contorno é o risco de cheia');
-      }
-      expect(find.textContaining('Ar (modelo) · '), findsOneWidget);
+      expect(
+          find.descendant(
+              of: find.byKey(const ValueKey('selo-ar-r-compensa')),
+              matching: find.text('Ar 54 · Moderada')),
+          findsOneWidget);
+      expect(find.byKey(const ValueKey('camada-ar')), findsNothing,
+          reason: 'o valor é de um ponto da grade, não do município');
+      expect(find.text('Boa · 0 a 40'), findsOneWidget);
+      expect(find.text('Péssima · acima de 200'), findsOneWidget);
       for (final n in NivelAr.values) {
         expect(find.byKey(ValueKey('legenda-ar-${n.name}')), findsOneWidget);
       }
     });
 
-    testWidgets('sem as regiões ligadas, a camada desenha o próprio contorno',
-        (t) async {
+    testWidgets('"Boa" com cautela vira "Boa (estimativa)" no selo', (t) async {
+      final r = ResumoAr.doJson(_linha(iqar: 30)).comContexto(
+          ContextoAr.doJson(_contexto(semSensor: true, cautela: true)));
       await montar(t, const MapaScreen(),
-          ar: ArFixo([ResumoAr.doJson(_linha(iqar: 150))]),
-          preferencias: {
-            'mapa.camadas': ['qualidadeAr'],
-          });
+          ar: ArFixo([r]), preferencias: ligada);
       await t.pump(const Duration(milliseconds: 100));
       await t.pump(const Duration(milliseconds: 100));
-      final camada =
-          t.widget<PolygonLayer>(find.byKey(const ValueKey('camada-ar')));
-      expect(camada.polygons, isNotEmpty);
-      expect(camada.polygons.first.borderStrokeWidth, 1.8);
-      expect(
-          camada.polygons.first.borderColor, NivelAr.n4.cor(Brightness.light));
+      expect(find.text('Ar 30 · Boa (estimativa)'), findsOneWidget);
     });
 
-    testWidgets('sem estimativa: nada pintado e a legenda diz isso', (t) async {
+    testWidgets('sem estimativa: o selo diz isso', (t) async {
       await montar(t, const MapaScreen(),
           ar: ArFixo([ResumoAr.doJson(_linha(iqar: null))]),
-          preferencias: {
-            'mapa.camadas': ['regioes', 'qualidadeAr'],
-          });
+          preferencias: ligada);
       await t.pump(const Duration(milliseconds: 100));
       await t.pump(const Duration(milliseconds: 100));
-      expect(
-          t
-              .widget<PolygonLayer>(find.byKey(const ValueKey('camada-ar')))
-              .polygons,
-          isEmpty);
+      expect(find.text('Ar sem estimativa'), findsOneWidget);
       expect(find.text('Ar (modelo) · sem estimativa'), findsOneWidget);
     });
 
@@ -297,69 +282,127 @@ void main() {
     });
   });
 
-  group('Medição local (OpenAQ)', () {
-    Map<String, dynamic> linhaLocal() => {
-          'region_id': 'r-compensa',
-          'pm25_24h': 21.3,
-          'iqar': 41,
-          'sensores': 2,
-          'distancia_km': 4,
-          'fontes': 'OpenAQ · PurpleAir',
-          'atualizado_em': '2026-11-22T13:00:00+00:00',
-        };
-
-    test('lê a linha da RPC e monta a frase', () {
-      final m = MedicaoLocalAr.doJson(linhaLocal())!;
-      expect(m.nivel, NivelAr.n2);
-      expect(m.frase,
-          'MP2,5 de 21,3 µg/m³ na média de 24 h (moderada, índice 41), 2 sensores a até 4 km.');
+  group('Sensor perto e cautela (Fase 4)', () {
+    test('lê o contexto da RPC', () {
+      final c = ContextoAr.doJson(_contexto());
+      expect(c.comparacaoOk, isTrue);
+      expect(c.sensorNivel, NivelAr.n4);
+      expect(c.modeloNivel, NivelAr.n2);
+      expect(c.fraseComparacao,
+          'Sensor perto: Muito ruim (80 µg/m³). Modelo: Moderada');
+      expect(c.fraseDivergencia, contains('sensor perto indica ar bem pior'));
+      expect(ContextoAr.doJson(_contexto(ok: false)).fraseComparacao, isNull);
       expect(
-          MedicaoLocalAr.doJson({...linhaLocal(), 'pm25_24h': null}), isNull);
+          ContextoAr.doJson(_contexto(sensorPior: false, modeloPior: true))
+              .fraseDivergencia,
+          contains('modelo indica ar pior'));
     });
 
-    testWidgets('aparece no cartão com a fonte quando há sensor', (t) async {
-      final r = ResumoAr.doJson(_linha())
-          .comLocal(MedicaoLocalAr.doJson(linhaLocal()));
+    testWidgets('cartão mostra as duas leituras, sem dizer quem acertou',
+        (t) async {
+      final r =
+          ResumoAr.doJson(_linha()).comContexto(ContextoAr.doJson(_contexto()));
       await montar(t, const MapaScreen(), ar: ArFixo([r]));
       await t.pump(const Duration(milliseconds: 100));
-      await t.scrollUntilVisible(find.textContaining('Medição local'), 200,
-          scrollable: _rolavel());
+      final comp = find.byKey(const Key('ar-comparacao'));
+      await t.scrollUntilVisible(comp, 200, scrollable: _rolavel());
       expect(
-          find.byWidgetPredicate((w) =>
-              w is Semantics &&
-              (w.properties.label ?? '')
-                  .startsWith('Medição local: MP2,5 de 21,3')),
+          find.descendant(
+              of: comp,
+              matching: find.text(
+                  'Sensor perto: Muito ruim (80 µg/m³). Modelo: Moderada.')),
           findsOneWidget);
-      expect(find.textContaining('OpenAQ · PurpleAir', findRichText: true),
+      expect(
+          find.descendant(
+              of: comp,
+              matching: find.textContaining('sensor perto indica ar bem pior')),
           findsOneWidget);
+      expect(
+          find.descendant(
+              of: comp,
+              matching:
+                  find.textContaining('baixo custo (AirGradient, a 2 km')),
+          findsOneWidget);
+      expect(find.textContaining('%'), findsNothing, reason: 'sem porcentagem');
     });
 
-    testWidgets('sem sensor, nada muda no cartão', (t) async {
-      await montar(t, const MapaScreen(),
-          ar: ArFixo([ResumoAr.doJson(_linha())]));
+    testWidgets('sensor sem dias suficientes: só diz que existe', (t) async {
+      final r = ResumoAr.doJson(_linha())
+          .comContexto(ContextoAr.doJson(_contexto(ok: false)));
+      await montar(t, const MapaScreen(), ar: ArFixo([r]));
+      await t.pump(const Duration(milliseconds: 100));
+      final aviso = find.textContaining('ainda sem dias suficientes');
+      await t.scrollUntilVisible(aviso, 200, scrollable: _rolavel());
+      expect(find.byKey(const Key('ar-comparacao')), findsNothing);
+    });
+
+    testWidgets('região só com modelo, "Boa" em época de fumaça: cautela',
+        (t) async {
+      final r = ResumoAr.doJson(_linha(iqar: 30)).comContexto(
+          ContextoAr.doJson(_contexto(semSensor: true, cautela: true)));
+      await montar(t, const MapaScreen(), ar: ArFixo([r]));
+      await t.pump(const Duration(milliseconds: 100));
+      final cautela = find.byKey(const Key('ar-cautela-boa'));
+      await t.scrollUntilVisible(cautela, 200, scrollable: _rolavel());
+      expect(find.text(textoCautelaBoa), findsOneWidget);
+      expect(find.textContaining('Há um sensor perto'), findsNothing);
+    });
+
+    testWidgets('com cautela mas nível Moderada: sem a frase do "Boa"',
+        (t) async {
+      final r = ResumoAr.doJson(_linha()).comContexto(
+          ContextoAr.doJson(_contexto(semSensor: true, cautela: true)));
+      await montar(t, const MapaScreen(), ar: ArFixo([r]));
       await t.pump(const Duration(milliseconds: 100));
       await t.scrollUntilVisible(find.text('Ar moderada · índice 54'), 200,
           scrollable: _rolavel());
-      expect(find.textContaining('Medição local', findRichText: true),
-          findsNothing);
+      expect(find.byKey(const Key('ar-cautela-boa')), findsNothing);
     });
   });
 
   group('Perfil', () {
-    test('preferência de ar vai para o banco', () {
-      expect(const PreferenciasNotificacao().paraBanco()['ar'], true);
-      expect(const PreferenciasNotificacao(ar: false).paraBanco()['ar'], false);
+    test('preferência de ar: desligada por padrão, vai como ar_optin', () {
+      final b = const PreferenciasNotificacao().paraBanco();
+      expect(b['ar_optin'], false);
+      expect(b['ar'], false);
+      expect(const PreferenciasNotificacao(ar: true).paraBanco()['ar_optin'],
+          true);
     });
 
-    testWidgets('chave "Qualidade do ar" desliga e fica salva', (t) async {
-      await montar(t, const PerfilScreen());
+    testWidgets('sem aviso ligado: sem chave, texto diz onde há sensor',
+        (t) async {
+      final r =
+          ResumoAr.doJson(_linha()).comContexto(ContextoAr.doJson(_contexto()));
+      await montar(t, const PerfilScreen(), ar: ArFixo([r]));
+      await t.pump(const Duration(milliseconds: 100));
+      await t.pump(const Duration(milliseconds: 100));
+      final texto = find.byKey(const Key('avisos-ar-texto'));
+      await t.scrollUntilVisible(texto, 200,
+          scrollable: find.byType(Scrollable).first);
+      expect(
+          find.descendant(
+              of: texto,
+              matching: find.textContaining(
+                  'Sensor de qualidade do ar perto: Compensa.')),
+          findsOneWidget);
+      expect(find.byKey(const Key('avisos-ar')), findsNothing);
+    });
+
+    testWidgets('com aviso ligado na região: chave aparece, desligada, e salva',
+        (t) async {
+      final r = ResumoAr.doJson(_linha())
+          .comContexto(ContextoAr.doJson(_contexto(avisoLigado: true)));
+      await montar(t, const PerfilScreen(), ar: ArFixo([r]));
+      await t.pump(const Duration(milliseconds: 100));
+      await t.pump(const Duration(milliseconds: 100));
       final chave = find.byKey(const Key('avisos-ar'));
       await t.scrollUntilVisible(chave, 200,
           scrollable: find.byType(Scrollable).first);
+      expect(t.widget<SwitchListTile>(chave).value, isFalse);
       await t.tap(chave);
       await t.pump();
       final prefs = await SharedPreferences.getInstance();
-      expect(prefs.getBool('avisos.ar'), isFalse);
+      expect(prefs.getBool('avisos.ar_optin'), isTrue);
     });
 
     testWidgets('fontes de dados listam o ar com o estado da coleta',
@@ -376,3 +419,32 @@ void main() {
     });
   });
 }
+
+/// Linha como a RPC ar_contexto devolve (valores inventados).
+Map<String, dynamic> _contexto({
+  bool ok = true,
+  bool semSensor = false,
+  bool sensorPior = true,
+  bool modeloPior = false,
+  bool cautela = false,
+  bool avisoLigado = false,
+}) =>
+    {
+      'region_id': 'r-compensa',
+      'tem_sensor': !semSensor,
+      'sensor_nome': semSensor ? null : 'Manaus',
+      'sensor_provedor': semSensor ? null : 'AirGradient',
+      'sensor_distancia_km': semSensor ? null : 2,
+      'sensor_situacao': semSensor ? null : 'saudável',
+      'comparacao_ok': ok && !semSensor,
+      'sensor_pm25_24h': ok && !semSensor ? 80 : null,
+      'sensor_nivel': ok && !semSensor ? 'N4' : null,
+      'modelo_pm25_24h': ok && !semSensor ? 20 : null,
+      'modelo_nivel': ok && !semSensor ? 'N2' : null,
+      'sensor_pior': ok && !semSensor && sensorPior,
+      'modelo_pior': ok && !semSensor && modeloPior,
+      'epoca_fumaca': true,
+      'focos_300km_72h': 120,
+      'cautela_boa': cautela,
+      'aviso_sensor_ligado': avisoLigado,
+    };
