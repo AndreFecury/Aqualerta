@@ -79,3 +79,33 @@ BEGIN
     END LOOP;
 END $$;
 REVOKE ALL ON FUNCTION public.ar_retro_simular(numeric, boolean) FROM PUBLIC, anon, authenticated;
+
+-- Dias locais com aviso ativo (mesma regra de ar_retro_simular), para a R4.
+CREATE OR REPLACE FUNCTION public.ar_retro_dias_aviso(p_limite numeric, p_epa boolean)
+RETURNS TABLE (region_id uuid, dia date)
+LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+    reg record; h record;
+    abre integer := public.ar_cfg('aviso_horas_seguidas');
+    fecha integer := public.ar_cfg('aviso_fim_horas');
+    acima integer; abaixo integer; ativo boolean; ant timestamptz;
+BEGIN
+    FOR reg IN SELECT DISTINCT r.id, r.state_code FROM public.monitored_regions r
+                JOIN public.ar_validacao_horas v ON v.region_id = r.id AND v.origem = 'retro' LOOP
+        acima := 0; abaixo := 0; ativo := false; ant := NULL;
+        FOR h IN SELECT n.hora, n.nowcast FROM public.ar_retro_nowcast(p_epa) n
+                  WHERE n.region_id = reg.id ORDER BY n.hora LOOP
+            IF ant IS NOT NULL AND h.hora - ant > interval '1 hour' THEN acima := 0; abaixo := 0; END IF;
+            ant := h.hora;
+            IF h.nowcast > p_limite THEN acima := acima + 1; abaixo := 0; ELSE abaixo := abaixo + 1; acima := 0; END IF;
+            IF NOT ativo AND acima >= abre THEN ativo := true;
+            ELSIF ativo AND abaixo >= fecha THEN ativo := false; END IF;
+            IF ativo THEN
+                region_id := reg.id;
+                dia := (h.hora AT TIME ZONE public.regiao_fuso(reg.state_code))::date;
+                RETURN NEXT;
+            END IF;
+        END LOOP;
+    END LOOP;
+END $$;
+REVOKE ALL ON FUNCTION public.ar_retro_dias_aviso(numeric, boolean) FROM PUBLIC, anon, authenticated;

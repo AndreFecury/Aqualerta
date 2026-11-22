@@ -21,3 +21,11 @@ SELECT * FROM public.ar_retro_simular(50, false);
 SELECT pg_temp.confere((SELECT episodios = 1 AND dias_com_aviso = 1 FROM public.ar_retro_simular(50, false)), 'pico de 4 h abre 1 aviso a 50');
 SELECT pg_temp.confere((SELECT episodios = 0 FROM public.ar_retro_simular(75, true)), 'corrigido (70) não passa de 75');
 ROLLBACK;
+BEGIN;
+INSERT INTO public.ar_validacao_horas (region_id, hora, origem, modelo_pm25, sensor_pm25, sensor_pm25_epa, valido)
+SELECT 'a0000000-0000-0000-0000-000000000001', '2026-08-10 04:00+00'::timestamptz + i * interval '1 hour', 'retro', 10,
+       CASE WHEN i BETWEEN 10 AND 13 THEN 100 ELSE 20 END, CASE WHEN i BETWEEN 10 AND 13 THEN 70 ELSE 10 END, true
+  FROM generate_series(0, 19) i;
+SELECT pg_temp.confere((SELECT array_agg(DISTINCT dia) FROM public.ar_retro_dias_aviso(50, false)) = ARRAY['2026-08-10'::date],
+                       'dias com aviso: o dia local do pico');
+ROLLBACK;
