@@ -11,8 +11,7 @@
 --   - Views fechadas (security_invoker): ar_validacao_dias (dia local e dia
 --     UTC), ar_validacao_resumo, ar_validacao_resumo_horario, ar_cobertura.
 --   - ar_fumaca_dias: preenchida pelo script do teste retroativo (Fase 1b).
---   - net._http_response e net.http_request_queue: sem acesso para anon e
---     authenticated.
+--   - net._http_response/http_request_queue: ver nota na seção 5 (não dá para revogar).
 -- Consultar no SQL Editor:  select * from public.ar_validacao_resumo;
 -- ============================================================
 
@@ -447,7 +446,12 @@ REVOKE ALL ON public.ar_config, public.ar_validacao_horas, public.ar_fumaca_dias
               public.ar_cobertura
   FROM PUBLIC, anon, authenticated;
 
-REVOKE ALL ON net._http_response, net.http_request_queue FROM anon, authenticated;
+-- net._http_response e net.http_request_queue: o dono é supabase_admin, que
+-- concede tudo a PUBLIC, anon e authenticated (padrão do pg_net no Supabase).
+-- O papel postgres não consegue revogar concessões de outro dono, então NÃO
+-- há REVOKE aqui (não teria efeito). Conferido em 22/11/2026: o esquema net
+-- não é exposto pela API (PGRST106) e nenhuma função pública o lê; a chave da
+-- OpenAQ não fica gravada em nenhuma das duas tabelas.
 
 -- ------------------------------------------------------------
 -- 6. Agenda: depois do ar (:14) e da OpenAQ (:19)

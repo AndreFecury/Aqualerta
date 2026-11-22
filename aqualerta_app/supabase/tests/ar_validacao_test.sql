@@ -142,10 +142,8 @@ SELECT pg_temp.confere(NOT has_table_privilege('anon', 'public.ar_validacao_hora
                    AND NOT has_table_privilege('anon', 'public.ar_cobertura', 'SELECT')
                    AND NOT has_table_privilege('anon', 'public.ar_config', 'SELECT')
                    AND NOT has_table_privilege('anon', 'public.ar_fumaca_dias', 'SELECT')
-                   AND NOT has_table_privilege('anon', 'public.openaq_ur_horas', 'SELECT')
-                   AND NOT has_table_privilege('anon', 'net._http_response', 'SELECT')
-                   AND NOT has_table_privilege('authenticated', 'net.http_request_queue', 'SELECT'),
-                       'sem permissão para anon/authenticated (tabelas, views e net)');
+                   AND NOT has_table_privilege('anon', 'public.openaq_ur_horas', 'SELECT'),
+                       'sem permissão para anon/authenticated (tabelas e views)');
 SELECT pg_temp.confere((SELECT reloptions @> ARRAY['security_invoker=true'] FROM pg_class WHERE relname = 'ar_validacao_resumo')
                    AND (SELECT reloptions @> ARRAY['security_invoker=true'] FROM pg_class WHERE relname = 'ar_cobertura'),
                        'views com security_invoker');
@@ -159,7 +157,7 @@ VALUES ('a0000000-0000-0000-0000-000000000001', '2026-08-01 00:00+00', 'retro', 
 SET LOCAL ROLE anon;
 DO $$ DECLARE t text; n bigint; BEGIN
   FOREACH t IN ARRAY ARRAY['public.ar_validacao_horas', 'public.ar_validacao_dias', 'public.ar_validacao_resumo',
-                           'public.ar_cobertura', 'public.ar_config', 'net._http_response'] LOOP
+                           'public.ar_cobertura', 'public.ar_config'] LOOP
     BEGIN
       EXECUTE 'SELECT count(*) FROM ' || t INTO n;
       RAISE EXCEPTION 'FALHOU: anon leu % (% linhas)', t, n;
