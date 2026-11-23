@@ -1,0 +1,16 @@
+Baixado em 2026-11-23T03:14:58.969Z de telemetriaws1.ana.gov.br (DadosHidrometeorologicos).
+ana_14990000_2023.csv: 183 dias, 0 sem leitura
+ana_14990000_2024.csv: 183 dias, 0 sem leitura
+ana_14990000_2026.csv: 175 dias, 0 sem leitura
+ana_16030000_2023.csv: 183 dias, 0 sem leitura
+ana_16030000_2024.csv: 183 dias, 0 sem leitura
+ana_16030000_2026.csv: 175 dias, 0 sem leitura
+ana_16350002_2023.csv: 183 dias, 183 sem leitura
+ana_16350002_2024.csv: 183 dias, 183 sem leitura
+ana_16350002_2026.csv: 175 dias, 122 sem leitura
+ana_15630000_2023.csv: 183 dias, 4 sem leitura
+ana_15630000_2024.csv: 183 dias, 2 sem leitura
+ana_15630000_2026.csv: 175 dias, 0 sem leitura
+ana_15960060_2023.csv: 183 dias, 183 sem leitura
+ana_15960060_2024.csv: 183 dias, 183 sem leitura
+ana_15960060_2026.csv: 175 dias, 2 sem leitura
