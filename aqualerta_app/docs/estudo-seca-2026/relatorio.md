@@ -26,7 +26,7 @@ Todo número deste texto sai de um arquivo em [`dados/`](dados/). Os arquivos s�
 |---|---|---|---|---|
 | 2023 | 16/09 | 19/09 | **23/09** | 12,64 m em 26/10 |
 | 2024 | 31/08 | 04/09 | **10/09** | 12,14 m em 01/11 |
-| 2026 | 24/09 | 29/09 | **12/10** | 15,87 m em 22/11 (ainda descendo, cerca de 4 cm/dia) |
+| 2026 | 24/09 | 29/09 | **12/10** | 15,87 m em 22/11, **provisório** (ainda descendo, cerca de 4 cm/dia) |
 
 - Em 2026 o rio cruzou os 17,7 m **19 dias depois de 2023 e 32 dias depois de 2024**.
 - No mesmo dia do ano, 22/11, Manaus estava em 13,28 m em 2023, 14,18 m em 2024 e 15,87 m em 2026 (`mesmo_dia.csv`).
@@ -38,7 +38,7 @@ Não temos cotas de seca do SGB para estas estações; as cotas cadastradas no A
 
 | Estação | 2023 | 2024 | 2026 (até 22/11) |
 |---|---|---|---|
-| Itacoatiara | 0,37 m em 26/10 | −0,16 m em 31/10 | 2,94 m em 22/11 (ainda descendo) |
+| Itacoatiara | 0,37 m em 26/10 | −0,16 m em 31/10 | 2,94 m em 22/11, provisório (ainda descendo) |
 | Humaitá | 8,12 m em 12/10 | 8,05 m em 14/10 | 10,11 m em 18/10 |
 | Parintins | sem dado | sem dado | −0,68 m em 20/11 (série curta) |
 

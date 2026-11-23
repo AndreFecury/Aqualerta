@@ -9,7 +9,7 @@ Para empresas de navegação e Defesa Civil. Detalhes, limites e dados no [relat
 - 2024: em 10/09.
 - 2026: em 12/10, 19 e 32 dias mais tarde que nos anos anteriores.
 
-Em 22/11/2026 o rio estava em 15,87 m e ainda descia.
+Em 22/11/2026 o rio estava em 15,87 m e ainda descia: é o mínimo provisório, porque a vazante de 2026 ainda não terminou.
 
 **Aviso antecipado.** Testamos uma regra simples, definida antes de olhar o resultado: a tendência dos últimos 14 dias projeta o cruzamento de 17,7 m em até 15 dias.
 - Nos três anos, ela avisou **de 10 a 20 dias antes** do cruzamento, sem alarme falso.
