@@ -1,0 +1,122 @@
+# Vigia de fora do Supabase: confere a saúde das fontes do AquaAlerta.
+#
+# A cada 30 min chama saude_resumo() com a chave pública (anon). O run FALHA,
+# e o GitHub manda e-mail ao dono, quando:
+#   - o Supabase não responde (3 tentativas), ou
+#   - saude_resumo() diz falha (regra no banco, 20261127a_saude.sql).
+# Para não mandar e-mail a cada 30 min durante o mesmo problema, um problema
+# que continua só volta a falhar o run a cada 6 h; nos intervalos o run passa
+# com um aviso amarelo. O estado fica no cache do Actions.
+#
+# Limites conhecidos:
+#   - o GitHub pode atrasar ou pular execuções agendadas;
+#   - agendamentos só rodam na branch padrão (main);
+#   - em repositório público, o GitHub desliga agendamentos depois de 60 dias
+#     sem atividade. O passo mensal "manter ligado" religa este workflow e o
+#     manter-supabase-ativo.yml pela API, só com o GITHUB_TOKEN.
+name: Saúde das fontes
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"
+    - cron: "43 13 1 * *"    # dia 1 de cada mês: religar os agendamentos
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: write
+
+concurrency:
+  group: saude-fontes
+  cancel-in-progress: false
+
+jobs:
+  vigiar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      # Chave pública (anon), a mesma que já está no app (lib/main.dart) e em
+      # manter-supabase-ativo.yml. saude_resumo() não tem dado pessoal.
+      SUPABASE_URL: https://gayykjlkdtmmzovdbjkb.supabase.co
+      SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdheXlramxrZHRtbXpvdmRiamtiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk3NjI5NjQsImV4cCI6MjA5NTMzODk2NH0.0_NJrYR5NvoWDlMS3qpjnSGdsthWwhqgWDFPetHCIgI
+      REPETIR_AVISO_H: "6"
+    steps:
+      - name: Manter os agendamentos ligados
+        if: github.event.schedule == '43 13 1 * *' || github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for w in saude-fontes.yml manter-supabase-ativo.yml; do
+            gh api -X PUT "repos/${{ github.repository }}/actions/workflows/$w/enable" && echo "religado: $w"
+          done
+
+      - name: Estado anterior
+        uses: actions/cache/restore@v4
+        with:
+          path: estado
+          key: saude-estado-${{ github.run_id }}
+          restore-keys: saude-estado-
+
+      - name: Conferir saude_resumo()
+        id: conferir
+        run: |
+          mkdir -p estado
+          codigo=000
+          for tentativa in 1 2 3; do
+            codigo=$(curl -s -m 30 -o resumo.json -w "%{http_code}" -X POST \
+              "$SUPABASE_URL/rest/v1/rpc/saude_resumo" \
+              -H "apikey: $SUPABASE_ANON_KEY" -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
+              -H "Content-Type: application/json" -d '{}') || codigo=000
+            [ "$codigo" = "200" ] && break
+            sleep 20
+          done
+
+          if [ "$codigo" != "200" ]; then
+            problema="Supabase não respondeu (HTTP $codigo, 3 tentativas)"
+          elif [ "$(jq -r '.falha' resumo.json)" = "true" ]; then
+            problema=$(jq -r '.motivos | join(" | ")' resumo.json)
+          else
+            problema=""
+          fi
+
+          {
+            echo "## Saúde das fontes"
+            echo
+            if [ "$codigo" = "200" ]; then
+              echo "Conferido em $(jq -r '.verificado_em' resumo.json). Contagem: $(jq -c '.contagem' resumo.json)"
+              echo
+              jq -r '.motivos[] | "- falha: " + .' resumo.json
+              jq -r '.sem_dado[] | "- sem dado: " + .' resumo.json
+            else
+              echo "- $problema"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          agora=$(date -u +%s)
+          ultimo=$(cat estado/ultimo_aviso 2>/dev/null || echo 0)
+          if [ -z "$problema" ]; then
+            [ "$ultimo" != "0" ] && echo "::notice::Tudo de volta ao normal."
+            echo 0 > estado/ultimo_aviso
+            echo "Tudo ok."
+          elif [ $(( agora - ultimo )) -ge $(( REPETIR_AVISO_H * 3600 )) ]; then
+            echo "$agora" > estado/ultimo_aviso
+            echo "avisar=1" >> "$GITHUB_OUTPUT"
+            echo "problema=$problema" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::Problema continua (já avisado há menos de ${REPETIR_AVISO_H} h): $problema"
+          fi
+
+      - name: Guardar estado
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: estado
+          key: saude-estado-${{ github.run_id }}
+
+      - name: Avisar (falha o run para o GitHub mandar e-mail)
+        if: steps.conferir.outputs.avisar == '1'
+        env:
+          PROBLEMA: ${{ steps.conferir.outputs.problema }}
+        run: |
+          echo "::error::$PROBLEMA"
+          exit 1
