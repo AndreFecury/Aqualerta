@@ -234,6 +234,17 @@ class ContextoAr {
   static String _ug(double v) => v.toStringAsFixed(0);
 
   /// "Sensor perto: Moderada (31 µg/m³). Modelo: Boa". Sem dizer quem acertou.
+  /// Cautela só pela época de fumaça (poucos focos perto): texto mais brando.
+  bool get cautelaSoEpoca =>
+      cautelaBoa && epocaFumaca && focos300km72h < limiarFocosCautela;
+
+  /// O texto que acompanha o "Boa" do modelo, ou null quando não precisa.
+  String? get textoCautela => !cautelaBoa
+      ? null
+      : cautelaSoEpoca
+          ? textoCautelaEpoca
+          : textoCautelaBoa;
+
   String? get fraseComparacao {
     if (!comparacaoOk || sensorNivel == null || modeloNivel == null)
       return null;
@@ -258,6 +269,16 @@ const textoCautelaBoa =
     'O modelo costuma subestimar fumaça forte; se há cheiro de queimado ou '
     'céu encoberto, trate o ar como ruim.';
 
+/// Versão mais branda (decisão de 23/11/2026): só a época de fumaça vale,
+/// com poucos focos perto.
+const textoCautelaEpoca =
+    'Nesta época do ano pode chegar fumaça que o modelo não capta bem; se '
+    'notar cheiro de queimado ou céu encoberto, trate o ar como ruim.';
+
+/// "Muitos focos" a 300 km em 72 h. Igual a `fumaca_focos_300km_72h` em
+/// ar_config (20261126a_ar_contexto.sql); mudou lá, mude aqui.
+const limiarFocosCautela = 600;
+
 /// Aviso de qualidade do ar pelo SENSOR (tabela ar_avisos, migração
 /// 20261126b). Usa o índice em tempo quase real (NowCast da EPA), não o IQAr
 /// oficial do MMA. O modelo nunca abre aviso.
@@ -273,6 +294,7 @@ class AvisoAr {
     this.nowcastMax,
     this.fim,
     this.motivoFim,
+    this.teste = false,
   });
 
   final String id;
@@ -286,11 +308,14 @@ class AvisoAr {
   final bool ativo;
   final String? motivoFim;
 
+  /// Aviso de teste (ar_avisos.teste_para, 20261127b): só a conta dona vê.
+  final bool teste;
+
   NivelAr get nivel => NivelAr.doAviso(severidade);
 
-  /// "Ar muito ruim" / "Ar péssimo".
-  String get titulo =>
-      severidade == Severidade.critico ? 'Ar péssimo' : 'Ar muito ruim';
+  /// "Ar muito ruim" / "Ar péssimo"; "TESTE · …" no aviso de teste.
+  String get titulo => '${teste ? 'TESTE · ' : ''}'
+      '${severidade == Severidade.critico ? 'Ar péssimo' : 'Ar muito ruim'}';
 
   factory AvisoAr.doJson(Map<String, dynamic> j) => AvisoAr(
         id: j['id'] as String,
@@ -303,5 +328,6 @@ class AvisoAr {
         fim: j['fim'] == null ? null : DateTime.parse(j['fim'] as String),
         ativo: j['situacao'] == 'ativo',
         motivoFim: j['motivo_fim'] as String?,
+        teste: j['teste_para'] != null,
       );
 }

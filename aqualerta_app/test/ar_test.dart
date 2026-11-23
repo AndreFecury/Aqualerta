@@ -336,7 +336,19 @@ void main() {
       expect(find.byKey(const Key('ar-comparacao')), findsNothing);
     });
 
-    testWidgets('região só com modelo, "Boa" em época de fumaça: cautela',
+    testWidgets('região só com modelo, "Boa" com muitos focos: cautela forte',
+        (t) async {
+      final r = ResumoAr.doJson(_linha(iqar: 30)).comContexto(ContextoAr.doJson(
+          _contexto(semSensor: true, cautela: true, focos: 900)));
+      await montar(t, const MapaScreen(), ar: ArFixo([r]));
+      await t.pump(const Duration(milliseconds: 100));
+      final cautela = find.byKey(const Key('ar-cautela-boa'));
+      await t.scrollUntilVisible(cautela, 200, scrollable: _rolavel());
+      expect(find.text(textoCautelaBoa), findsOneWidget);
+      expect(find.textContaining('Há um sensor perto'), findsNothing);
+    });
+
+    testWidgets('"Boa" só pela época de fumaça (poucos focos): cautela branda',
         (t) async {
       final r = ResumoAr.doJson(_linha(iqar: 30)).comContexto(
           ContextoAr.doJson(_contexto(semSensor: true, cautela: true)));
@@ -344,8 +356,8 @@ void main() {
       await t.pump(const Duration(milliseconds: 100));
       final cautela = find.byKey(const Key('ar-cautela-boa'));
       await t.scrollUntilVisible(cautela, 200, scrollable: _rolavel());
-      expect(find.text(textoCautelaBoa), findsOneWidget);
-      expect(find.textContaining('Há um sensor perto'), findsNothing);
+      expect(find.text(textoCautelaEpoca), findsOneWidget);
+      expect(find.text(textoCautelaBoa), findsNothing);
     });
 
     testWidgets('com cautela mas nível Moderada: sem a frase do "Boa"',
@@ -428,6 +440,7 @@ Map<String, dynamic> _contexto({
   bool modeloPior = false,
   bool cautela = false,
   bool avisoLigado = false,
+  int focos = 120,
 }) =>
     {
       'region_id': 'r-compensa',
@@ -444,7 +457,7 @@ Map<String, dynamic> _contexto({
       'sensor_pior': ok && !semSensor && sensorPior,
       'modelo_pior': ok && !semSensor && modeloPior,
       'epoca_fumaca': true,
-      'focos_300km_72h': 120,
+      'focos_300km_72h': focos,
       'cautela_boa': cautela,
       'aviso_sensor_ligado': avisoLigado,
     };
