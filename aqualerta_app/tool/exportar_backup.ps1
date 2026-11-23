@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
   Exporta um backup do banco do AquaAlerta (Supabase) para uma pasta FORA do repositório.
 
