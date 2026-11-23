@@ -13,7 +13,9 @@ import 'apoio/dados_exemplo.dart';
 import 'telas_v3_test.dart' show montar;
 
 /// Linha como a tabela ar_avisos devolve (valores inventados).
-Map<String, dynamic> _linha({bool ativo = true, String sev = 'HIGH'}) => {
+Map<String, dynamic> _linha(
+        {bool ativo = true, String sev = 'HIGH', bool teste = false}) =>
+    {
       'id': 'aviso-ar-1',
       'region_id': 'r-compensa',
       'severity': sev,
@@ -26,6 +28,7 @@ Map<String, dynamic> _linha({bool ativo = true, String sev = 'HIGH'}) => {
       'situacao': ativo ? 'ativo' : 'encerrado',
       'motivo_fim':
           ativo ? null : 'o índice ficou abaixo de 75 µg/m³ por 3 h seguidas',
+      if (teste) 'teste_para': '00000000-0000-0000-0000-0000000000a1',
     };
 
 CartaFalsa _dados(List<AvisoAr> avisos) =>
@@ -42,6 +45,25 @@ void main() {
     expect(a.titulo, 'Ar muito ruim');
     expect(AvisoAr.doJson(_linha(sev: 'CRITICAL')).titulo, 'Ar péssimo');
     expect(AvisoAr.doJson(_linha(ativo: false)).ativo, isFalse);
+    expect(AvisoAr.doJson(_linha()).teste, isFalse);
+    expect(AvisoAr.doJson(_linha(teste: true)).titulo, 'TESTE · Ar muito ruim');
+  });
+
+  testWidgets('aviso de teste: TESTE na lista', (t) async {
+    await montar(t, const AlertasScreen(),
+        dados: _dados([AvisoAr.doJson(_linha(teste: true))]));
+    await t.pump(const Duration(milliseconds: 100));
+    expect(find.text('TESTE · Ar muito ruim em Compensa'), findsOneWidget);
+    expect(find.textContaining('Teste, só você vê · desde'), findsOneWidget);
+  });
+
+  testWidgets('aviso de teste: detalhe diz que não houve medição', (t) async {
+    await montar(t, const DetalheAlertaScreen(alertaId: 'aviso-ar-1'),
+        dados: _dados([AvisoAr.doJson(_linha(teste: true))]));
+    await t.pump(const Duration(milliseconds: 100));
+    expect(find.text('TESTE · Ar muito ruim em Compensa'), findsOneWidget);
+    expect(find.byKey(const Key('aviso-ar-teste')), findsOneWidget);
+    expect(find.textContaining('mediu partículas finas'), findsNothing);
   });
 
   test('painel carrega os avisos de ar à parte dos alertas de cheia', () async {

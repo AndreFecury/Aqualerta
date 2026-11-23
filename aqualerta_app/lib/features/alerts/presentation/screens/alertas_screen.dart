@@ -277,7 +277,7 @@ class _LinhaAvisoAr extends StatelessWidget {
       leading: SeloAr(nivel: aviso.nivel),
       title: Text('${aviso.titulo} em $regiao', style: t.titleSmall),
       subtitle: Text(
-          'Sensor perto · $quando'
+          '${aviso.teste ? 'Teste, só você vê' : 'Sensor perto'} · $quando'
           '${aviso.nowcastAtual != null ? ' · ${aviso.nowcastAtual!.toStringAsFixed(0)} µg/m³ agora' : ''}',
           style: t.bodySmall!.copyWith(color: c.tinta2)),
       trailing: const Icon(Icons.chevron_right),

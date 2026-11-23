@@ -171,7 +171,7 @@ class BlocoAr extends StatelessWidget {
         SeloAr(nivel: nivel, indice: r.iqar, grande: true),
         if (cautela && nivel == NivelAr.n1) ...[
           const SizedBox(height: 6),
-          Text(textoCautelaBoa,
+          Text(ctx.textoCautela!,
               key: const Key('ar-cautela-boa'),
               style: t.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
         ],

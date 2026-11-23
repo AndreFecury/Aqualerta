@@ -349,13 +349,21 @@ class DetalheAvisoAr extends StatelessWidget {
                       '${aviso.motivoFim != null ? ': ${aviso.motivoFim}' : ''}.',
               style: t.bodyMedium),
           const SizedBox(height: 12),
-          Text(
-              'O sensor perto de $regiao mediu partículas finas (MP2,5) acima de '
-              '${aviso.limite.toStringAsFixed(0)} µg/m³ por pelo menos 2 horas seguidas'
-              '${aviso.nowcastAtual != null ? ' (agora ${aviso.nowcastAtual!.toStringAsFixed(0)} µg/m³' : ''}'
-              '${aviso.nowcastMax != null ? ', o maior desde o início: ${aviso.nowcastMax!.toStringAsFixed(0)} µg/m³' : ''}'
-              '${aviso.nowcastAtual != null ? ')' : ''}.',
-              style: t.bodyMedium),
+          if (aviso.teste)
+            Text(
+                'Este é um aviso de TESTE, visível só para a sua conta. Não '
+                'houve medição: ele existe para conferir a lista, esta tela e '
+                'o push, e é encerrado sozinho depois de 1 hora.',
+                key: const Key('aviso-ar-teste'),
+                style: t.bodyMedium?.copyWith(fontWeight: FontWeight.w600))
+          else
+            Text(
+                'O sensor perto de $regiao mediu partículas finas (MP2,5) acima de '
+                '${aviso.limite.toStringAsFixed(0)} µg/m³ por pelo menos 2 horas seguidas'
+                '${aviso.nowcastAtual != null ? ' (agora ${aviso.nowcastAtual!.toStringAsFixed(0)} µg/m³' : ''}'
+                '${aviso.nowcastMax != null ? ', o maior desde o início: ${aviso.nowcastMax!.toStringAsFixed(0)} µg/m³' : ''}'
+                '${aviso.nowcastAtual != null ? ')' : ''}.',
+                style: t.bodyMedium),
           if (nivel.saude != null) ...[
             const SizedBox(height: 12),
             Text(nivel.saude!, style: t.bodyMedium),
