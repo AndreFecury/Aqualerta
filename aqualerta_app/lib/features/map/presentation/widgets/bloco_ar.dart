@@ -214,10 +214,43 @@ class BlocoAr extends StatelessWidget {
       final nivel = r.nivel!;
       final prev = r.previsto48h;
       corpo = [
-        SeloAr(nivel: nivel, indice: r.iqar, grande: true),
-        const SizedBox(height: 2),
-        Text('Índice oficial (IQAr, média de 24 h), estimado pelo modelo.',
-            key: const Key('ar-rotulo-24h'), style: t.bodySmall),
+        if (r.semMedicaoAgora) ...[
+          // Sem medição: nada de manchete tranquilizadora vinda do modelo.
+          Semantics(
+            header: true,
+            child: Text('Sem medição agora',
+                key: const Key('ar-sem-medicao'),
+                style: t.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+          ),
+          const SizedBox(height: 4),
+          Column(
+            key: const Key('ar-estimativa-modelo'),
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (nivel.index >= NivelAr.n3.index) ...[
+                // O modelo pode SUBIR o nível, nunca baixar: ruim ou pior fica
+                // em destaque, marcado como estimativa.
+                Text('Estimativa do modelo (CAMS, não é medição):',
+                    style: t.bodyMedium),
+                const SizedBox(height: 4),
+                SeloAr(
+                    nivel: nivel,
+                    indice: r.iqar,
+                    grande: true,
+                    estimativa: true),
+              ] else
+                Text(
+                    'Estimativa do modelo (CAMS, não é medição): '
+                    'ar ${nivel.nome.toLowerCase()}, índice ${r.iqar}.',
+                    style: t.bodyMedium),
+            ],
+          ),
+        ] else ...[
+          SeloAr(nivel: nivel, indice: r.iqar, grande: true),
+          const SizedBox(height: 2),
+          Text('Índice oficial (IQAr, média de 24 h), estimado pelo modelo.',
+              key: const Key('ar-rotulo-24h'), style: t.bodySmall),
+        ],
         ...blocoAgora,
         if (cautela && nivel == NivelAr.n1) ...[
           const SizedBox(height: 6),

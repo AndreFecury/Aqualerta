@@ -7,10 +7,17 @@ import 'package:aqualerta/shared/theme/aqua_colors.dart';
 /// para o contraste não depender da cor do nível.
 class SeloAr extends StatelessWidget {
   const SeloAr(
-      {required this.nivel, this.indice, this.grande = false, super.key});
+      {required this.nivel,
+      this.indice,
+      this.grande = false,
+      this.estimativa = false,
+      super.key});
   final NivelAr nivel;
   final int? indice;
   final bool grande;
+
+  /// Valor só do modelo: o leitor de tela anuncia "Estimativa do modelo: …".
+  final bool estimativa;
 
   @override
   Widget build(BuildContext context) {
@@ -20,7 +27,8 @@ class SeloAr extends StatelessWidget {
         '${indice == null ? '' : ' · índice $indice'}';
     final lado = grande ? 22.0 : 18.0;
     return Semantics(
-      label: 'Qualidade do ar ${nivel.nome.toLowerCase()}'
+      label: '${estimativa ? 'Estimativa do modelo: qualidade' : 'Qualidade'} '
+          'do ar ${nivel.nome.toLowerCase()}'
           '${indice == null ? '' : ', índice $indice'}',
       excludeSemantics: true,
       child: Row(

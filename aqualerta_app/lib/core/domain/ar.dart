@@ -118,6 +118,17 @@ class ResumoAr {
 
   NivelAr? get nivel => iqar == null ? null : NivelAr.doIndice(iqar!);
 
+  /// Só há o modelo: sem sensor perto, com o sensor parado ou sem o contexto
+  /// (não dá para afirmar que há medição). Então o cartão não abre com uma
+  /// categoria tranquilizadora (Boa/Moderada) vinda do modelo: diz "Sem
+  /// medição agora" e mostra a estimativa como linha rotulada. Uma média de
+  /// 3 h do sensor ([agora]) prova que há medição recente.
+  bool get semMedicaoAgora {
+    if (agora != null) return false;
+    final c = contexto;
+    return c == null || !c.temSensor || c.sensorSituacao == 'parado';
+  }
+
   /// A coleta é de hora em hora; mais de 3 h sem dado novo é atraso.
   bool desatualizado({DateTime? agora}) =>
       atualizadoEm != null &&
