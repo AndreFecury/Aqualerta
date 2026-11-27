@@ -99,6 +99,51 @@ class BlocoAr extends StatelessWidget {
       ],
     ];
     final cautela = ctx != null && ctx.cautelaBoa;
+    // "Agora": média de 3 h do sensor, ao lado do índice oficial de 24 h.
+    final agora = r?.agora;
+    final referencia24h = r?.nivel ?? ctx?.sensorNivel;
+    final piorou =
+        agora != null && referencia24h != null && agora.piorou(referencia24h);
+    final blocoAgora = <Widget>[
+      if (agora != null) ...[
+        const SizedBox(height: 8),
+        Semantics(
+          container: true,
+          child: Column(
+            key: const Key('ar-agora'),
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                  '${agora.textoMedia}'
+                  '${agora.ate != null ? ' Até as ${horaManaus(agora.ate!)}.' : ''}',
+                  style: t.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
+              if (piorou) ...[
+                const SizedBox(height: 6),
+                Container(
+                  key: const Key('ar-piorou'),
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: c.barro),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(Icons.trending_up, size: 18, color: c.barro),
+                      const SizedBox(width: 6),
+                      Expanded(
+                          child: Text(AgoraAr.textoPiorou,
+                              style: t.bodyMedium
+                                  ?.copyWith(fontWeight: FontWeight.w700))),
+                    ],
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ],
+    ];
     final aviso = context
         .watch<PainelCubit>()
         .state
@@ -161,6 +206,7 @@ class BlocoAr extends StatelessWidget {
       corpo = [
         Text('Sem estimativa de qualidade do ar para esta região agora.',
             style: t.bodyMedium),
+        ...blocoAgora,
         ...sensorPerto,
         ...botaoAviso,
       ];
@@ -169,6 +215,10 @@ class BlocoAr extends StatelessWidget {
       final prev = r.previsto48h;
       corpo = [
         SeloAr(nivel: nivel, indice: r.iqar, grande: true),
+        const SizedBox(height: 2),
+        Text('Índice oficial (IQAr, média de 24 h), estimado pelo modelo.',
+            key: const Key('ar-rotulo-24h'), style: t.bodySmall),
+        ...blocoAgora,
         if (cautela && nivel == NivelAr.n1) ...[
           const SizedBox(height: 6),
           Text(ctx.textoCautela!,

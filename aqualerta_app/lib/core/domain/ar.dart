@@ -70,6 +70,7 @@ class ResumoAr {
     this.fumacaProvavel = false,
     this.atualizadoEm,
     this.contexto,
+    this.agora,
   });
 
   final String regiaoId;
@@ -77,7 +78,15 @@ class ResumoAr {
   /// Sensor perto, comparação e cautela (RPC ar_contexto).
   final ContextoAr? contexto;
 
-  ResumoAr comContexto(ContextoAr? m) => ResumoAr(
+  /// Média das últimas 3 h do sensor (RPC ar_agora); null sem sensor saudável.
+  final AgoraAr? agora;
+
+  ResumoAr comContexto(ContextoAr? m) => _copia(contexto: m, agora: agora);
+
+  ResumoAr comAgora(AgoraAr? a) => _copia(contexto: contexto, agora: a);
+
+  ResumoAr _copia({required ContextoAr? contexto, required AgoraAr? agora}) =>
+      ResumoAr(
         regiaoId: regiaoId,
         hora: hora,
         iqar: iqar,
@@ -89,7 +98,8 @@ class ResumoAr {
         focos24h: focos24h,
         fumacaProvavel: fumacaProvavel,
         atualizadoEm: atualizadoEm,
-        contexto: m,
+        contexto: contexto,
+        agora: agora,
       );
 
   /// Hora (UTC) a que o índice se refere.
@@ -145,6 +155,72 @@ class ResumoAr {
         fumacaProvavel: j['fumaca_provavel'] as bool? ?? false,
         atualizadoEm: _t(j['atualizado_em']),
       );
+}
+
+/// Indicador "agora": média de MP2,5 das últimas 3 horas válidas do sensor
+/// (RPC `ar_agora`, migração 20261128a_ar_agora.sql). NÃO é o IQAr oficial,
+/// que usa média de 24 h: [nivel] é só a faixa em que essa média cairia
+/// (os mesmos pontos de corte do MP2,5). Nunca é rotulado como "AQI dos EUA".
+class AgoraAr {
+  const AgoraAr({
+    required this.regiaoId,
+    required this.pm25,
+    required this.nivel,
+    this.iqar,
+    this.ate,
+  });
+
+  final String regiaoId;
+
+  /// Média das últimas 3 horas válidas, µg/m³.
+  final double pm25;
+
+  /// Faixa equivalente (pontos de corte do IQAr aplicados à média de 3 h).
+  final NivelAr nivel;
+  final int? iqar;
+
+  /// Fim da última hora usada (UTC).
+  final DateTime? ate;
+
+  /// Níveis a mais que o índice de 24 h para dizer que o ar piorou
+  /// (`agora_niveis_aviso` em ar_config).
+  static const niveisParaPiorou = 2;
+
+  /// A faixa de 3 h está [niveisParaPiorou] níveis ou mais acima do nível de
+  /// 24 h mostrado ao lado.
+  bool piorou(NivelAr referencia24h) =>
+      nivel.index - referencia24h.index >= niveisParaPiorou;
+
+  static const textoPiorou =
+      'Nas últimas horas o ar piorou: a média das últimas 3 h do sensor está '
+      'bem acima do índice de 24 h.';
+
+  String get textoMedia => 'Agora (sensor, média das últimas 3 h): MP2,5 de '
+      '${pm25.toStringAsFixed(1).replaceAll('.', ',')} µg/m³, na faixa '
+      '${nivel.nome.toLowerCase()} do IQAr. Não é o índice oficial.';
+
+  static NivelAr? _nivel(Object? v) => switch (v) {
+        'N1' => NivelAr.n1,
+        'N2' => NivelAr.n2,
+        'N3' => NivelAr.n3,
+        'N4' => NivelAr.n4,
+        'N5' => NivelAr.n5,
+        _ => null,
+      };
+
+  /// Linha da RPC; null se faltar valor ou faixa.
+  static AgoraAr? doJson(Map<String, dynamic> j) {
+    final pm = (j['pm25_3h'] as num?)?.toDouble();
+    final nivel = _nivel(j['nivel_3h']);
+    if (pm == null || nivel == null) return null;
+    return AgoraAr(
+      regiaoId: j['region_id'] as String,
+      pm25: pm,
+      nivel: nivel,
+      iqar: (j['iqar_3h'] as num?)?.toInt(),
+      ate: j['ate'] == null ? null : DateTime.parse(j['ate'] as String),
+    );
+  }
 }
 
 /// Contexto do ar de uma região (RPC `ar_contexto`, migração

@@ -34,7 +34,18 @@ class ArRepository implements FonteAr {
         contextos[m.regiaoId] = m;
       }
     } catch (_) {}
-    return [for (final r in resumos) r.comContexto(contextos[r.regiaoId])];
+    // "Agora" (média de 3 h do sensor) também é extra: sem ele, só o 24 h.
+    final agoras = <String, AgoraAr>{};
+    try {
+      for (final l in await _c.rpc('ar_agora') as List) {
+        final a = AgoraAr.doJson(l as Map<String, dynamic>);
+        if (a != null) agoras[a.regiaoId] = a;
+      }
+    } catch (_) {}
+    return [
+      for (final r in resumos)
+        r.comContexto(contextos[r.regiaoId]).comAgora(agoras[r.regiaoId])
+    ];
   }
 
   @override
