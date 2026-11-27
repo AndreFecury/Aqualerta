@@ -3,7 +3,7 @@
 --   stub_base, ar_stubs, ar_validacao_stubs, push_teste_stubs, sinal_dados_stubs,
 --   20261118_push_fcm, 20261121b_sinal_dados, 20261122_ar, 20261123b_push_teste,
 --   20261124_openaq, 20261125a_ar_pausa, 20261125b, 20261125c, 20261126a,
---   20261126b, 20261127b, 20261128a, este arquivo
+--   20261126b, 20261127b, 20261128a, 20261128d, este arquivo
 -- Valores inventados. Manaus = a0000000-...-001 (tem sensor), Parintins = ...-002 (não tem).
 -- O app (test/ar_sem_medicao_test.dart) decide a manchete "Sem medição agora"
 -- a partir de tem_sensor e sensor_situacao = 'parado' vindos de ar_contexto().
@@ -44,7 +44,7 @@ CREATE TEMP TABLE c AS SELECT * FROM public.ar_contexto('2026-11-22 23:42+00') W
 SELECT pg_temp.confere((SELECT nivel = 'N2' AND iqar BETWEEN 41 AND 80 FROM r), 'o modelo diz "moderada" (IQAr 41 a 80)');
 SELECT pg_temp.confere((SELECT tem_sensor AND sensor_situacao = 'parado' AND NOT comparacao_ok FROM c),
                        'o sensor perto está "parado": é isto que faz o app trocar a manchete por "Sem medição agora"');
-SELECT pg_temp.confere(NOT EXISTS (SELECT 1 FROM public.ar_agora('2026-11-22 23:42+00')),
+SELECT pg_temp.confere(EXISTS (SELECT 1 FROM public.ar_agora('2026-11-22 23:42+00') WHERE pm25_3h IS NULL AND sensor_parado),
                        'sem "agora" de 3 h com o sensor parado (nada de número velho)');
 SELECT pg_temp.confere((SELECT tem_sensor IS FALSE FROM public.ar_contexto('2026-11-22 23:42+00')
                          WHERE region_id = 'a0000000-0000-0000-0000-000000000002'),

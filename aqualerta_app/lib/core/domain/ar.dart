@@ -71,6 +71,7 @@ class ResumoAr {
     this.atualizadoEm,
     this.contexto,
     this.agora,
+    this.semDados,
   });
 
   final String regiaoId;
@@ -81,11 +82,23 @@ class ResumoAr {
   /// Média das últimas 3 h do sensor (RPC ar_agora); null sem sensor saudável.
   final AgoraAr? agora;
 
-  ResumoAr comContexto(ContextoAr? m) => _copia(contexto: m, agora: agora);
+  /// O sensor perto parou de mandar leituras (RPC ar_agora); null = em dia ou
+  /// sem informação.
+  final SemDadosSensor? semDados;
 
-  ResumoAr comAgora(AgoraAr? a) => _copia(contexto: contexto, agora: a);
+  ResumoAr comContexto(ContextoAr? m) =>
+      _copia(contexto: m, agora: agora, semDados: semDados);
 
-  ResumoAr _copia({required ContextoAr? contexto, required AgoraAr? agora}) =>
+  ResumoAr comAgora(AgoraAr? a) =>
+      _copia(contexto: contexto, agora: a, semDados: semDados);
+
+  ResumoAr comSemDados(SemDadosSensor? d) =>
+      _copia(contexto: contexto, agora: agora, semDados: d);
+
+  ResumoAr _copia(
+          {required ContextoAr? contexto,
+          required AgoraAr? agora,
+          required SemDadosSensor? semDados}) =>
       ResumoAr(
         regiaoId: regiaoId,
         hora: hora,
@@ -100,6 +113,7 @@ class ResumoAr {
         atualizadoEm: atualizadoEm,
         contexto: contexto,
         agora: agora,
+        semDados: semDados,
       );
 
   /// Hora (UTC) a que o índice se refere.
@@ -125,6 +139,7 @@ class ResumoAr {
   /// 3 h do sensor ([agora]) prova que há medição recente.
   bool get semMedicaoAgora {
     if (agora != null) return false;
+    if (semDados != null) return true;
     final c = contexto;
     return c == null || !c.temSensor || c.sensorSituacao == 'parado';
   }
@@ -167,6 +182,34 @@ class ResumoAr {
         atualizadoEm: _t(j['atualizado_em']),
       );
 }
+
+/// O sensor perto não manda leituras há mais de 3 h (`sensor_parado` em
+/// `ar_agora`, migração 20261128d). [horas] é o tempo desde a última leitura,
+/// em horas inteiras; null quando o sensor nunca mandou nada.
+class SemDadosSensor {
+  const SemDadosSensor({required this.regiaoId, this.horas});
+  final String regiaoId;
+  final int? horas;
+
+  /// "sem dados há 13 horas" / "há 1 hora".
+  String? get frase => horas == null
+      ? null
+      : 'sem dados há $horas ${horas == 1 ? 'hora' : 'horas'}';
+
+  /// Linha da RPC; null se o sensor não está parado.
+  static SemDadosSensor? doJson(Map<String, dynamic> j) {
+    if (j['sensor_parado'] != true) return null;
+    return SemDadosSensor(
+      regiaoId: j['region_id'] as String,
+      horas: (j['sem_dados_h'] as num?)?.toInt(),
+    );
+  }
+}
+
+/// Aviso fixo quando só há o modelo: o CAMS pode subestimar fumaça.
+const textoModeloSubestima =
+    'O valor do modelo é só uma estimativa e pode subestimar a fumaça, '
+    'principalmente em época de queimadas.';
 
 /// Indicador "agora": média de MP2,5 das últimas 3 horas válidas do sensor
 /// (RPC `ar_agora`, migração 20261128a_ar_agora.sql). NÃO é o IQAr oficial,

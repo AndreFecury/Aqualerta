@@ -2,7 +2,9 @@
 --   stub_base, ar_stubs, ar_validacao_stubs, push_teste_stubs, sinal_dados_stubs,
 --   20261118_push_fcm, 20261121b_sinal_dados, 20261122_ar, 20261123b_push_teste,
 --   20261124_openaq, 20261125a_ar_pausa, 20261125b, 20261125c, 20261126a,
---   20261126b, 20261127b, 20261128a, este arquivo
+--   20261126b, 20261127b, 20261128a, 20261128d, este arquivo
+-- (20261128d recria ar_agora() com as colunas de "sensor sem dados": sensor parado
+-- agora é uma linha com valores NULL e sensor_parado = true, não a ausência de linha)
 -- Valores inventados para exercitar as regras. Manaus = a0000000-...-001.
 \set ON_ERROR_STOP 1
 BEGIN;
@@ -47,8 +49,10 @@ SELECT pg_temp.confere((SELECT nivel_24h_sensor = 'N1' AND nivel_3h = 'N2' AND N
 
 -- 3. Sensor parado: sem linha (nunca um "agora" velho).
 SELECT pg_temp.serie(pg_temp.limpo21(ARRAY[250,120,10]));
-SELECT pg_temp.confere(EXISTS (SELECT 1 FROM public.ar_agora(pg_temp.agora(26))), '2 h depois do último dado: ainda vale');
-SELECT pg_temp.confere(NOT EXISTS (SELECT 1 FROM public.ar_agora(pg_temp.agora(30))), 'sensor parado há 6 h: sem "agora"');
+SELECT pg_temp.confere(EXISTS (SELECT 1 FROM public.ar_agora(pg_temp.agora(26)) WHERE pm25_3h IS NOT NULL AND NOT sensor_parado),
+                       '2 h depois do último dado: ainda vale');
+SELECT pg_temp.confere(EXISTS (SELECT 1 FROM public.ar_agora(pg_temp.agora(30)) WHERE pm25_3h IS NULL AND nivel_3h IS NULL AND sensor_parado),
+                       'sensor parado há 6 h: sem número de "agora" (nada velho), marcado como parado');
 
 -- 4. Hora faltando: só vale com 3 horas SEGUIDAS; usa o último trio completo
 --    (horas 19, 20 e 21 = 10, 10, 250 -> média 90; termina às 22:00).
@@ -56,7 +60,8 @@ DELETE FROM public.ar_validacao_horas WHERE hora = '2026-11-22 22:00+00';
 SELECT pg_temp.confere((SELECT pm25_3h = 90 AND ate = '2026-11-22 22:00+00' FROM public.ar_agora(pg_temp.agora(24))),
                        'furo na série: usa o último trio de horas seguidas (e diz até quando)');
 SELECT pg_temp.serie(ARRAY[10,10]::numeric[]);
-SELECT pg_temp.confere(NOT EXISTS (SELECT 1 FROM public.ar_agora(pg_temp.agora(2))), 'menos de 3 horas válidas: sem "agora"');
+SELECT pg_temp.confere(NOT EXISTS (SELECT 1 FROM public.ar_agora(pg_temp.agora(2)) WHERE pm25_3h IS NOT NULL),
+                       'menos de 3 horas válidas: sem "agora" (o sensor não está parado, só faltam horas)');
 -- hora descartada pela saúde do sensor (sensores_n = 0) não conta
 SELECT pg_temp.serie(ARRAY[10,10,10,10]::numeric[]);
 UPDATE public.ar_validacao_horas SET sensores_n = 0 WHERE hora = '2026-11-22 02:00+00';

@@ -53,6 +53,12 @@ class BlocoAr extends StatelessWidget {
     final ctx = r?.contexto;
     final comparacao = ctx?.fraseComparacao;
     final divergencia = ctx?.fraseDivergencia;
+    // Com estimativa do modelo e sensor parado, o bloco "Sem medição agora"
+    // já diz há quantas horas; a linha do sensor não repete.
+    final semDadosNoBloco = r != null &&
+        r.iqar != null &&
+        r.semMedicaoAgora &&
+        r.semDados?.frase != null;
     final fonteSensor = ctx == null || !ctx.temSensor
         ? null
         : '${ctx.sensorProvedor ?? 'sensor'}'
@@ -93,11 +99,12 @@ class BlocoAr extends StatelessWidget {
             ],
           ),
         ),
-      ] else if (fonteSensor != null) ...[
+      ] else if (fonteSensor != null && !semDadosNoBloco) ...[
         const SizedBox(height: 6),
         Text(
             ctx!.sensorSituacao == 'parado'
-                ? 'Há um sensor perto ($fonteSensor), sem leituras recentes.'
+                ? 'Há um sensor perto ($fonteSensor), '
+                    '${r?.semDados?.frase ?? 'sem leituras recentes'}.'
                 : 'Há um sensor perto ($fonteSensor), ainda sem dias '
                     'suficientes para comparar com o modelo.',
             style: t.bodySmall),
@@ -227,6 +234,15 @@ class BlocoAr extends StatelessWidget {
                 key: const Key('ar-sem-medicao'),
                 style: t.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
           ),
+          if (r.semDados?.frase != null) ...[
+            const SizedBox(height: 2),
+            Text(
+                'O sensor perto'
+                '${fonteSensor != null ? ' ($fonteSensor)' : ''} '
+                'está ${r.semDados!.frase}.',
+                key: const Key('ar-sensor-sem-dados'),
+                style: t.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
+          ],
           const SizedBox(height: 4),
           Column(
             key: const Key('ar-estimativa-modelo'),
@@ -248,6 +264,10 @@ class BlocoAr extends StatelessWidget {
                     'Estimativa do modelo (CAMS, não é medição): '
                     'ar ${nivel.nome.toLowerCase()}, índice ${r.iqar}.',
                     style: t.bodyMedium),
+              const SizedBox(height: 4),
+              Text(textoModeloSubestima,
+                  key: const Key('ar-modelo-subestima'),
+                  style: t.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
             ],
           ),
         ] else ...[
