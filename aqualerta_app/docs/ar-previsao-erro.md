@@ -94,10 +94,15 @@ pré-registro `docs/ar-validacao-preregistro.md`), por exemplo "nos dias de fuma
 'muitos', o modelo emitido 24 h antes não perde mais que X% dos dias de nível N4+".
 O X é decisão do dono; não escolhi um valor.
 
-## Alternativa de servidor (decisão do dono, não aplicada)
+## Chave de servidor (migração `20261128b_ar_previsao_oculta.sql`)
 
-Quem ainda usa 4.10.2 (ou anterior) continua vendo o número, porque o app que o
-esconde não foi publicado. Para esconder também nesses aparelhos seria preciso uma
-migração: uma chave em `ar_config` que faça `ar_resumo()` devolver
-`iqar_previsto_48h` e `hora_pior_prevista` nulos. Proponho decidir isso junto com a
-aprovação das migrações.
+Quem ainda usa 4.10.2 (ou anterior) continuaria vendo o número, porque o app que o
+esconde ainda não foi publicado. A migração esconde no **servidor**:
+`ar_config.previsao_48h_visivel = 0` (padrão) faz `ar_resumo()` devolver
+`iqar_previsto_48h` e `hora_pior_prevista` como NULL; as outras colunas ficam iguais.
+Chave apagada também esconde. O app novo trata NULL como "sem previsão" (e então não
+mostra nem o aviso de "experimental", só a tendência).
+
+Para mostrar de novo, depois da validação: `UPDATE public.ar_config SET valor = 1 WHERE
+chave = 'previsao_48h_visivel';`. Reaplicar a migração não desfaz essa escolha. Os dados
+continuam em `v_ar_indice_horas` para a validação. Teste: `ar_previsao_oculta_test.sql`.
