@@ -137,14 +137,19 @@ void main() {
   group('Bloco no cartão da região', () {
     testWidgets('mostra índice, poluente, previsão e a ressalva de modelo',
         (t) async {
+      // Sensor saudável perto: sem ele a manchete vira "Sem medição agora".
       await montar(t, const MapaScreen(),
-          ar: ArFixo([ResumoAr.doJson(_linha())]));
+          ar: ArFixo([
+            ResumoAr.doJson(_linha())
+                .comContexto(ContextoAr.doJson(_contexto(ok: false)))
+          ]));
       await t.pump(const Duration(milliseconds: 100));
       await t.scrollUntilVisible(find.text('Ar moderada · índice 54'), 200,
           scrollable: _rolavel());
       expect(find.textContaining('partículas finas (MP2,5)'), findsOneWidget);
-      expect(find.textContaining('pior previsto em 48 h: moderada (55)'),
-          findsOneWidget);
+      // A previsão numérica de 48 h está escondida (experimental).
+      expect(find.textContaining('pior previsto'), findsNothing);
+      expect(find.byKey(const Key('ar-previsao-experimental')), findsOneWidget);
       expect(find.textContaining('Crianças, idosos'), findsOneWidget);
       expect(find.textContaining('Estimativa de modelo, não medição local'),
           findsOneWidget);
@@ -179,7 +184,12 @@ void main() {
     });
 
     testWidgets('erro: botão de tentar de novo busca outra vez', (t) async {
-      final fonte = ArFixo([ResumoAr.doJson(_linha())])..falhar = true;
+      // Sensor saudável perto (a manchete com a categoria só vale com medição).
+      final fonte = ArFixo([
+        ResumoAr.doJson(_linha())
+            .comContexto(ContextoAr.doJson(_contexto(ok: false)))
+      ])
+        ..falhar = true;
       await montar(t, const MapaScreen(), ar: fonte);
       await t.pump(const Duration(milliseconds: 100));
       final botao = find.text('Tentar de novo');
@@ -366,7 +376,8 @@ void main() {
           ContextoAr.doJson(_contexto(semSensor: true, cautela: true)));
       await montar(t, const MapaScreen(), ar: ArFixo([r]));
       await t.pump(const Duration(milliseconds: 100));
-      await t.scrollUntilVisible(find.text('Ar moderada · índice 54'), 200,
+      // Só modelo: a manchete é "Sem medição agora" e a estimativa fica rotulada.
+      await t.scrollUntilVisible(find.text('Sem medição agora'), 200,
           scrollable: _rolavel());
       expect(find.byKey(const Key('ar-cautela-boa')), findsNothing);
     });

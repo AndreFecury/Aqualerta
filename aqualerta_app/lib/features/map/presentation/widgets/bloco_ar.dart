@@ -15,6 +15,11 @@ const textoLimitacoesAr =
     'incêndio confirmado: nuvens escondem fogo e queima de roçado também '
     'conta. A qualidade do ar não muda o risco de cheia.';
 
+/// Previsão de 48 h: experimental, sem número na tela até ser validada.
+const textoPrevisaoExperimental =
+    'Previsão de 48 h: experimental, ainda sem validação. Por isso o valor '
+    'não é mostrado; não use para decidir.';
+
 /// "16:00" na hora de Manaus (UTC−4).
 String horaManaus(DateTime d) {
   final m = d.toUtc().subtract(const Duration(hours: 4));
@@ -48,6 +53,12 @@ class BlocoAr extends StatelessWidget {
     final ctx = r?.contexto;
     final comparacao = ctx?.fraseComparacao;
     final divergencia = ctx?.fraseDivergencia;
+    // Com estimativa do modelo e sensor parado, o bloco "Sem medição agora"
+    // já diz há quantas horas; a linha do sensor não repete.
+    final semDadosNoBloco = r != null &&
+        r.iqar != null &&
+        r.semMedicaoAgora &&
+        r.semDados?.frase != null;
     final fonteSensor = ctx == null || !ctx.temSensor
         ? null
         : '${ctx.sensorProvedor ?? 'sensor'}'
@@ -88,17 +99,63 @@ class BlocoAr extends StatelessWidget {
             ],
           ),
         ),
-      ] else if (fonteSensor != null) ...[
+      ] else if (fonteSensor != null && !semDadosNoBloco) ...[
         const SizedBox(height: 6),
         Text(
             ctx!.sensorSituacao == 'parado'
-                ? 'Há um sensor perto ($fonteSensor), sem leituras recentes.'
+                ? 'Há um sensor perto ($fonteSensor), '
+                    '${r?.semDados?.frase ?? 'sem leituras recentes'}.'
                 : 'Há um sensor perto ($fonteSensor), ainda sem dias '
                     'suficientes para comparar com o modelo.',
             style: t.bodySmall),
       ],
     ];
     final cautela = ctx != null && ctx.cautelaBoa;
+    // "Agora": média de 3 h do sensor, ao lado do índice oficial de 24 h.
+    final agora = r?.agora;
+    final referencia24h = r?.nivel ?? ctx?.sensorNivel;
+    final piorou =
+        agora != null && referencia24h != null && agora.piorou(referencia24h);
+    final blocoAgora = <Widget>[
+      if (agora != null) ...[
+        const SizedBox(height: 8),
+        Semantics(
+          container: true,
+          child: Column(
+            key: const Key('ar-agora'),
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                  '${agora.textoMedia}'
+                  '${agora.ate != null ? ' Até as ${horaManaus(agora.ate!)}.' : ''}',
+                  style: t.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
+              if (piorou) ...[
+                const SizedBox(height: 6),
+                Container(
+                  key: const Key('ar-piorou'),
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: c.barro),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(Icons.trending_up, size: 18, color: c.barro),
+                      const SizedBox(width: 6),
+                      Expanded(
+                          child: Text(AgoraAr.textoPiorou,
+                              style: t.bodyMedium
+                                  ?.copyWith(fontWeight: FontWeight.w700))),
+                    ],
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ],
+    ];
     final aviso = context
         .watch<PainelCubit>()
         .state
@@ -161,6 +218,7 @@ class BlocoAr extends StatelessWidget {
       corpo = [
         Text('Sem estimativa de qualidade do ar para esta região agora.',
             style: t.bodyMedium),
+        ...blocoAgora,
         ...sensorPerto,
         ...botaoAviso,
       ];
@@ -168,7 +226,57 @@ class BlocoAr extends StatelessWidget {
       final nivel = r.nivel!;
       final prev = r.previsto48h;
       corpo = [
-        SeloAr(nivel: nivel, indice: r.iqar, grande: true),
+        if (r.semMedicaoAgora) ...[
+          // Sem medição: nada de manchete tranquilizadora vinda do modelo.
+          Semantics(
+            header: true,
+            child: Text('Sem medição agora',
+                key: const Key('ar-sem-medicao'),
+                style: t.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+          ),
+          if (r.semDados?.frase != null) ...[
+            const SizedBox(height: 2),
+            Text(
+                'O sensor perto'
+                '${fonteSensor != null ? ' ($fonteSensor)' : ''} '
+                'está ${r.semDados!.frase}.',
+                key: const Key('ar-sensor-sem-dados'),
+                style: t.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
+          ],
+          const SizedBox(height: 4),
+          Column(
+            key: const Key('ar-estimativa-modelo'),
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (nivel.index >= NivelAr.n3.index) ...[
+                // O modelo pode SUBIR o nível, nunca baixar: ruim ou pior fica
+                // em destaque, marcado como estimativa.
+                Text('Estimativa do modelo (CAMS, não é medição):',
+                    style: t.bodyMedium),
+                const SizedBox(height: 4),
+                SeloAr(
+                    nivel: nivel,
+                    indice: r.iqar,
+                    grande: true,
+                    estimativa: true),
+              ] else
+                Text(
+                    'Estimativa do modelo (CAMS, não é medição): '
+                    'ar ${nivel.nome.toLowerCase()}, índice ${r.iqar}.',
+                    style: t.bodyMedium),
+              const SizedBox(height: 4),
+              Text(textoModeloSubestima,
+                  key: const Key('ar-modelo-subestima'),
+                  style: t.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
+            ],
+          ),
+        ] else ...[
+          SeloAr(nivel: nivel, indice: r.iqar, grande: true),
+          const SizedBox(height: 2),
+          Text('Índice oficial (IQAr, média de 24 h), estimado pelo modelo.',
+              key: const Key('ar-rotulo-24h'), style: t.bodySmall),
+        ],
+        ...blocoAgora,
         if (cautela && nivel == NivelAr.n1) ...[
           const SizedBox(height: 6),
           Text(ctx.textoCautela!,
@@ -180,21 +288,23 @@ class BlocoAr extends StatelessWidget {
             'Puxado por ${ResumoAr.nomePoluente(r.poluente)}'
             '${r.pm25Media24h != null ? ' · MP2,5 de ${r.pm25Media24h!.toStringAsFixed(1).replaceAll('.', ',')} µg/m³ na média de 24 h' : ''}.',
             style: t.bodyMedium),
-        if (r.tendencia != null || prev != null) ...[
+        if (r.tendencia != null) ...[
           const SizedBox(height: 4),
           Text(
-              [
-                if (r.tendencia != null)
-                  switch (r.tendencia!) {
-                    TendenciaAr.sobe => 'Piorando em relação a ontem',
-                    TendenciaAr.desce => 'Melhorando em relação a ontem',
-                    TendenciaAr.estavel => 'Parecido com ontem',
-                  },
-                if (prev != null && r.horaPiorPrevista != null)
-                  'pior previsto em 48 h: ${NivelAr.doIndice(prev).nome.toLowerCase()} '
-                      '($prev) ${diaHoraManaus(r.horaPiorPrevista!)}',
-              ].join('; '),
+              switch (r.tendencia!) {
+                TendenciaAr.sobe => 'Piorando em relação a ontem',
+                TendenciaAr.desce => 'Melhorando em relação a ontem',
+                TendenciaAr.estavel => 'Parecido com ontem',
+              },
               style: t.bodySmall),
+        ],
+        // A previsão numérica de 48 h NÃO é mostrada até ser validada contra
+        // valores observados (pico observado ~IQAr 177 contra ~70 previstos;
+        // docs/ar-previsao-erro.md). O dado continua no modelo de domínio.
+        if (prev != null) ...[
+          const SizedBox(height: 4),
+          Text(textoPrevisaoExperimental,
+              key: const Key('ar-previsao-experimental'), style: t.bodySmall),
         ],
         if (r.focos24h > 0) ...[
           const SizedBox(height: 6),
