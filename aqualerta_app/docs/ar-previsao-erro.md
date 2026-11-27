@@ -96,6 +96,9 @@ O X é decisão do dono; não escolhi um valor.
 
 ## Chave de servidor (migração `20261128b_ar_previsao_oculta.sql`)
 
+**Estado: já aplicada em produção** (informado pelo dono). Com o padrão `previsao_48h_visivel = 0`
+a previsão já não chega a quem usa 4.10.2 ou anterior.
+
 Quem ainda usa 4.10.2 (ou anterior) continuaria vendo o número, porque o app que o
 esconde ainda não foi publicado. A migração esconde no **servidor**:
 `ar_config.previsao_48h_visivel = 0` (padrão) faz `ar_resumo()` devolver

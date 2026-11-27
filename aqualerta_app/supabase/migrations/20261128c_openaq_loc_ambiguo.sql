@@ -7,17 +7,28 @@
 -- horas dos sensores seguiam carregando, mas a busca diária de estações nunca
 -- terminava (openaq_estado.locais_ok_em parada desde 22/11/2026).
 --
--- A ÚNICA mudança: a variável passa a se chamar v_loc (declaração e ramo
--- 'ur_ambiente', onde ela é usada). O alias `loc` do ramo 'locais' fica como
--- estava. O resto da função é idêntico a 20261125c.
+-- DUAS mudanças em relação a 20261125c:
+--   1. a variável vira v_loc (declaração e ramo 'ur_ambiente', onde ela é
+--      usada); o alias `loc` do ramo 'locais' fica como estava;
+--   2. o ramo 'locais' deixa de ser destrutivo. Antes: DELETE de todos os
+--      sensores da região + INSERT do que a OpenAQ devolveu na hora. Agora:
+--      só INSERT ... ON CONFLICT (region_id, sensor_id) DO UPDATE. Sensor que
+--      aparece na resposta é atualizado (nome, provedor, licença, posição,
+--      distância; ultimo_dado nunca anda para trás; visto_em = agora). Sensor
+--      que JÁ ESTÁ guardado e some da resposta (ou resposta vazia) é MANTIDO,
+--      com visto_em antigo. Assim uma resposta ruim ou um sensor que a OpenAQ
+--      deixou de listar não apaga o sensor de uma região (ex.: Manaus) nem o
+--      cartão passa a achar que a região "não tem sensor".
+--   O resto da função é idêntico a 20261125c.
 --
 -- EFEITO AO APLICAR: a busca de estações volta a funcionar no próximo
--- openaq_pedir() (:16). Para cada região, o ramo 'locais' SUBSTITUI a lista de
--- sensores pelo que a OpenAQ devolve na hora (DELETE + INSERT, como sempre foi
--- desenhado). Um sensor que a OpenAQ não lista mais some da lista da região.
+-- openaq_pedir() (:16): sensores novos entram, os que aparecem são atualizados,
+-- NENHUM é apagado. Sensor aposentado de verdade continua na lista até alguém o
+-- remover à mão (o cartão o mostra como parado, "sem dados há X horas").
 --
--- DESFAZER: reaplicar a função de 20261125c_ar_validacao_ajustes.sql (o ramo
--- 'locais' volta a falhar). Nenhuma tabela, cron ou permissão muda.
+-- DESFAZER: reaplicar a função de 20261125c_ar_validacao_ajustes.sql (volta o
+-- erro do `loc` e o DELETE + INSERT). Linhas já mantidas ou atualizadas por esta
+-- versão ficam na tabela; nenhuma tabela, cron ou permissão muda.
 -- ============================================================
 
 CREATE OR REPLACE FUNCTION public.openaq_processar(p_agora timestamptz DEFAULT now())
@@ -50,7 +61,6 @@ BEGIN
             j := p.content::jsonb;
 
             IF p.tipo = 'locais' THEN
-                DELETE FROM public.openaq_sensores WHERE region_id = p.region_id;
                 INSERT INTO public.openaq_sensores AS s
                        (region_id, sensor_id, location_id, nome, provedor, licenca, lat, lon,
                         distancia_m, ultimo_dado, visto_em, parametro)
@@ -69,7 +79,13 @@ BEGIN
                    AND ((sen->'parameter'->>'id')::int = 2
                         OR EXISTS (SELECT 1 FROM jsonb_array_elements(loc->'sensors') s2
                                     WHERE (s2->'parameter'->>'id')::int = 2))
-                 ORDER BY sen->>'id';
+                 ORDER BY sen->>'id'
+                ON CONFLICT (region_id, sensor_id) DO UPDATE
+                   SET location_id = excluded.location_id, nome = excluded.nome,
+                       provedor = excluded.provedor, licenca = excluded.licenca,
+                       lat = excluded.lat, lon = excluded.lon, distancia_m = excluded.distancia_m,
+                       ultimo_dado = greatest(s.ultimo_dado, excluded.ultimo_dado),
+                       visto_em = excluded.visto_em, parametro = excluded.parametro;
                 locais_ok := true;
 
             ELSIF p.tipo = 'ur_ambiente' THEN
