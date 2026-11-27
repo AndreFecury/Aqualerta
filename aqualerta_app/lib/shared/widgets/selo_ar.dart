@@ -11,6 +11,7 @@ class SeloAr extends StatelessWidget {
       this.indice,
       this.grande = false,
       this.estimativa = false,
+      this.sensor = false,
       super.key});
   final NivelAr nivel;
   final int? indice;
@@ -18,6 +19,10 @@ class SeloAr extends StatelessWidget {
 
   /// Valor só do modelo: o leitor de tela anuncia "Estimativa do modelo: …".
   final bool estimativa;
+
+  /// Valor medido por um sensor (média de 3 h): o leitor de tela anuncia
+  /// "Medição do sensor: …".
+  final bool sensor;
 
   @override
   Widget build(BuildContext context) {
@@ -27,7 +32,8 @@ class SeloAr extends StatelessWidget {
         '${indice == null ? '' : ' · índice $indice'}';
     final lado = grande ? 22.0 : 18.0;
     return Semantics(
-      label: '${estimativa ? 'Estimativa do modelo: qualidade' : 'Qualidade'} '
+      label:
+          '${estimativa ? 'Estimativa do modelo: qualidade' : sensor ? 'Medição do sensor: qualidade' : 'Qualidade'} '
           'do ar ${nivel.nome.toLowerCase()}'
           '${indice == null ? '' : ', índice $indice'}',
       excludeSemantics: true,

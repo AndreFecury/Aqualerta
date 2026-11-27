@@ -15,6 +15,19 @@ const textoLimitacoesAr =
     'incêndio confirmado: nuvens escondem fogo e queima de roçado também '
     'conta. A qualidade do ar não muda o risco de cheia.';
 
+/// Rodapé de limitações quando a manchete vem de um sensor.
+const textoLimitacoesArSensor =
+    'A medição vem de um sensor de baixo custo num ponto só: vale para o local '
+    'dele, não para a cidade inteira. O modelo CAMS (Copernicus) tem quadrados '
+    'de dezenas de quilômetros e pode subestimar a fumaça. Foco de calor do '
+    'INPE não é incêndio confirmado: nuvens escondem fogo e queima de roçado '
+    'também conta. A qualidade do ar não muda o risco de cheia.';
+
+/// Poucas leituras do sensor nas últimas 24 h (ex-"cobertura baixa").
+const textoPoucasLeiturasAlto =
+    'Poucas leituras do sensor nas últimas 24 h: o valor pode estar '
+    'subestimado.';
+
 /// Previsão de 48 h: experimental, sem número na tela até ser validada.
 const textoPrevisaoExperimental =
     'Previsão de 48 h: experimental, ainda sem validação. Por isso o valor '
@@ -111,11 +124,10 @@ class BlocoAr extends StatelessWidget {
       ],
     ];
     final cautela = ctx != null && ctx.cautelaBoa;
-    // "Agora": média de 3 h do sensor, ao lado do índice oficial de 24 h.
+    // "Agora": média de 3 h do sensor, com a média de 24 h do PRÓPRIO sensor
+    // como contexto. Vale como manchete quando há cobertura de 24 h.
     final agora = r?.agora;
-    final referencia24h = r?.nivel ?? ctx?.sensorNivel;
-    final piorou =
-        agora != null && referencia24h != null && agora.piorou(referencia24h);
+    final piorou = agora != null && agora.piorouNoSensor;
     final blocoAgora = <Widget>[
       if (agora != null) ...[
         const SizedBox(height: 8),
@@ -129,6 +141,11 @@ class BlocoAr extends StatelessWidget {
                   '${agora.textoMedia}'
                   '${agora.ate != null ? ' Até as ${horaManaus(agora.ate!)}.' : ''}',
                   style: t.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
+              if (agora.textoDia != null) ...[
+                const SizedBox(height: 2),
+                Text(agora.textoDia!,
+                    key: const Key('ar-sensor-24h'), style: t.bodyMedium),
+              ],
               if (piorou) ...[
                 const SizedBox(height: 6),
                 Container(
@@ -214,7 +231,8 @@ class BlocoAr extends StatelessWidget {
           ),
         ),
       ];
-    } else if (r == null || r.iqar == null) {
+    } else if (r == null ||
+        (r.iqar == null && r.manchete == MancheteAr.semMedicao)) {
       corpo = [
         Text('Sem estimativa de qualidade do ar para esta região agora.',
             style: t.bodyMedium),
@@ -223,11 +241,53 @@ class BlocoAr extends StatelessWidget {
         ...botaoAviso,
       ];
     } else {
-      final nivel = r.nivel!;
+      final nivel = r.nivel; // do modelo; pode faltar
       final prev = r.previsto48h;
+      final manchete = r.manchete;
+      final porSensor = manchete == MancheteAr.sensor;
+      final poucasAlto = manchete == MancheteAr.poucasLeituras &&
+          agora!.nivel.index >= NivelAr.n3.index;
+      final cabecalhoSensor = porSensor || poucasAlto;
+      // Estimativa do modelo, sempre rotulada, nunca como manchete tranquila.
+      final linhaModelo = nivel == null
+          ? null
+          : (nivel.index >= NivelAr.n3.index && !cabecalhoSensor)
+              ? null // vira o selo grande abaixo
+              : 'Estimativa do modelo (CAMS, não é medição): '
+                  'ar ${nivel.nome.toLowerCase()}, índice ${r.iqar}.';
+      final modeloMuitoAbaixo = nivel != null &&
+          agora != null &&
+          nivel.index + 2 <= agora.nivel.index;
+      final saudeNivel = cabecalhoSensor ? agora!.nivel : nivel;
       corpo = [
-        if (r.semMedicaoAgora) ...[
-          // Sem medição: nada de manchete tranquilizadora vinda do modelo.
+        if (cabecalhoSensor) ...[
+          // Manchete vinda do SENSOR (média de 3 h), com o rótulo de que faixa
+          // é aquela e de onde vem.
+          Semantics(
+            container: true,
+            child: Column(
+              key: const Key('ar-manchete-sensor'),
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SeloAr(nivel: agora!.nivel, grande: true, sensor: true),
+                const SizedBox(height: 2),
+                Text(
+                    poucasAlto
+                        ? textoPoucasLeiturasAlto
+                        : 'Medição do sensor perto'
+                            '${fonteSensor != null ? ' ($fonteSensor)' : ''}'
+                            ', não o índice oficial de 24 h.',
+                    key: poucasAlto
+                        ? const Key('ar-poucas-leituras')
+                        : const Key('ar-rotulo-sensor'),
+                    style: poucasAlto
+                        ? t.bodyMedium?.copyWith(fontWeight: FontWeight.w700)
+                        : t.bodySmall),
+              ],
+            ),
+          ),
+        ] else ...[
+          // Sem manchete do sensor: nada de categoria tranquilizadora do modelo.
           Semantics(
             header: true,
             child: Text('Sem medição agora',
@@ -242,53 +302,85 @@ class BlocoAr extends StatelessWidget {
                 'está ${r.semDados!.frase}.',
                 key: const Key('ar-sensor-sem-dados'),
                 style: t.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
+          ] else if (manchete == MancheteAr.poucasLeituras) ...[
+            const SizedBox(height: 2),
+            Text(
+                'O sensor perto mandou poucas leituras nas últimas 24 h; as '
+                'últimas 3 h (${agora!.pm25.toStringAsFixed(1).replaceAll('.', ',')} '
+                'µg/m³, faixa ${agora.nivel.nome.toLowerCase()}) não bastam '
+                'para dizer que o ar está bom.',
+                key: const Key('ar-poucas-leituras'),
+                style: t.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
+          ] else if (ctx != null &&
+              ctx.temSensor &&
+              ctx.sensorSituacao != 'parado') ...[
+            const SizedBox(height: 2),
+            Text(
+                'O sensor perto mandou poucas leituras recentes (menos de 3 '
+                'horas seguidas).',
+                key: const Key('ar-poucas-leituras'),
+                style: t.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
           ],
+        ],
+        // Poucas leituras e valor baixo: o número fica só na frase de cima,
+        // nunca como leitura normal.
+        if (manchete != MancheteAr.poucasLeituras || poucasAlto) ...blocoAgora,
+        if (nivel != null &&
+            !cabecalhoSensor &&
+            nivel.index >= NivelAr.n3.index) ...[
+          // O modelo pode SUBIR o nível, nunca baixar: "ruim" ou pior fica em
+          // destaque, marcado como estimativa.
           const SizedBox(height: 4),
           Column(
             key: const Key('ar-estimativa-modelo'),
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (nivel.index >= NivelAr.n3.index) ...[
-                // O modelo pode SUBIR o nível, nunca baixar: ruim ou pior fica
-                // em destaque, marcado como estimativa.
-                Text('Estimativa do modelo (CAMS, não é medição):',
-                    style: t.bodyMedium),
-                const SizedBox(height: 4),
-                SeloAr(
-                    nivel: nivel,
-                    indice: r.iqar,
-                    grande: true,
-                    estimativa: true),
-              ] else
-                Text(
-                    'Estimativa do modelo (CAMS, não é medição): '
-                    'ar ${nivel.nome.toLowerCase()}, índice ${r.iqar}.',
-                    style: t.bodyMedium),
+              Text('Estimativa do modelo (CAMS, não é medição):',
+                  style: t.bodyMedium),
+              const SizedBox(height: 4),
+              SeloAr(
+                  nivel: nivel, indice: r.iqar, grande: true, estimativa: true),
               const SizedBox(height: 4),
               Text(textoModeloSubestima,
                   key: const Key('ar-modelo-subestima'),
                   style: t.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
             ],
           ),
-        ] else ...[
-          SeloAr(nivel: nivel, indice: r.iqar, grande: true),
-          const SizedBox(height: 2),
-          Text('Índice oficial (IQAr, média de 24 h), estimado pelo modelo.',
-              key: const Key('ar-rotulo-24h'), style: t.bodySmall),
+        ] else if (linhaModelo != null) ...[
+          const SizedBox(height: 4),
+          Column(
+            key: const Key('ar-estimativa-modelo'),
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(linhaModelo,
+                  style: cabecalhoSensor ? t.bodySmall : t.bodyMedium),
+              if (!cabecalhoSensor || modeloMuitoAbaixo) ...[
+                const SizedBox(height: 4),
+                Text(
+                    cabecalhoSensor
+                        ? 'O modelo está bem abaixo do que o sensor mede; ele '
+                            'pode subestimar a fumaça.'
+                        : textoModeloSubestima,
+                    key: const Key('ar-modelo-subestima'),
+                    style: t.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
+              ],
+            ],
+          ),
         ],
-        ...blocoAgora,
-        if (cautela && nivel == NivelAr.n1) ...[
+        if (!cabecalhoSensor && cautela && nivel == NivelAr.n1) ...[
           const SizedBox(height: 6),
           Text(ctx.textoCautela!,
               key: const Key('ar-cautela-boa'),
               style: t.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
         ],
-        const SizedBox(height: 6),
-        Text(
-            'Puxado por ${ResumoAr.nomePoluente(r.poluente)}'
-            '${r.pm25Media24h != null ? ' · MP2,5 de ${r.pm25Media24h!.toStringAsFixed(1).replaceAll('.', ',')} µg/m³ na média de 24 h' : ''}.',
-            style: t.bodyMedium),
-        if (r.tendencia != null) ...[
+        if (!porSensor && nivel != null) ...[
+          const SizedBox(height: 6),
+          Text(
+              'Puxado por ${ResumoAr.nomePoluente(r.poluente)}'
+              '${r.pm25Media24h != null ? ' · MP2,5 de ${r.pm25Media24h!.toStringAsFixed(1).replaceAll('.', ',')} µg/m³ na média de 24 h' : ''}.',
+              style: t.bodyMedium),
+        ],
+        if (!porSensor && r.tendencia != null) ...[
           const SizedBox(height: 4),
           Text(
               switch (r.tendencia!) {
@@ -319,17 +411,22 @@ class BlocoAr extends StatelessWidget {
               'de quilômetros.',
               style: t.bodySmall),
         ],
-        if (nivel.saude != null) ...[
+        if (saudeNivel?.saude != null) ...[
           const SizedBox(height: 6),
-          Text(nivel.saude!, style: t.bodyMedium),
+          Text(saudeNivel!.saude!, style: t.bodyMedium),
         ],
         ...sensorPerto,
         ...botaoAviso,
         const SizedBox(height: 6),
         Text(
-            'Estimativa de modelo, não medição local. '
-            '${r.atualizadoEm != null ? 'Atualizada às ${horaManaus(r.atualizadoEm!)}. ' : ''}'
-            'Fontes: Open-Meteo.com (CAMS/Copernicus, CC BY 4.0) e INPE Queimadas.',
+            cabecalhoSensor
+                ? 'O sensor é um aparelho de baixo custo'
+                    '${fonteSensor != null ? ' ($fonteSensor, via OpenAQ)' : ''}'
+                    ', não um monitor oficial. Modelo: Open-Meteo.com '
+                    '(CAMS/Copernicus, CC BY 4.0). Focos: INPE Queimadas.'
+                : 'Estimativa de modelo, não medição local. '
+                    '${r.atualizadoEm != null ? 'Atualizada às ${horaManaus(r.atualizadoEm!)}. ' : ''}'
+                    'Fontes: Open-Meteo.com (CAMS/Copernicus, CC BY 4.0) e INPE Queimadas.',
             style: t.bodySmall),
       ];
     }
@@ -351,7 +448,11 @@ class BlocoAr extends StatelessWidget {
             const SizedBox(height: 10),
             Text('Limitações', style: t.labelLarge),
             const SizedBox(height: 2),
-            Text(textoLimitacoesAr, style: t.bodySmall),
+            Text(
+                r != null && r.manchete == MancheteAr.sensor
+                    ? textoLimitacoesArSensor
+                    : textoLimitacoesAr,
+                style: t.bodySmall),
           ],
         ),
       ),

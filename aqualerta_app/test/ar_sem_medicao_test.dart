@@ -161,25 +161,37 @@ void main() {
   });
 
   group('Sensor saudável: nada muda', () {
-    testWidgets('manchete com a categoria, como antes', (t) async {
+    testWidgets('manchete com a categoria do sensor', (t) async {
       await montar(t, const MapaScreen(),
-          ar: ArFixo([_resumo(contexto: _contexto(situacao: 'saudável'))]));
+          ar: ArFixo([
+            _resumo(contexto: _contexto(situacao: 'saudável'))
+                .comAgora(AgoraAr.doJson({
+              'region_id': 'r-compensa',
+              'pm25_3h': 40.0,
+              'iqar_3h': 68,
+              'nivel_3h': 'N2',
+              'pm25_24h_sensor': 38.0,
+              'nivel_24h_sensor': 'N2',
+            }))
+          ]));
       await t.pump(const Duration(milliseconds: 100));
-      await t.scrollUntilVisible(find.text('Ar moderada · índice 80'), 200,
+      await t.scrollUntilVisible(find.text('Ar moderada'), 200,
           scrollable: _rolavel());
       expect(find.text('Sem medição agora'), findsNothing);
       expect(find.byKey(const Key('ar-sem-medicao')), findsNothing);
     });
 
-    testWidgets('cobertura baixa (sensor ainda manda dados): igual a antes',
-        (t) async {
+    testWidgets(
+        'cobertura baixa, mas sem as 3 h do ar_agora: sem medição (ver '
+        'ar_poucas_leituras_test.dart para o valor parcial)', (t) async {
       await montar(t, const MapaScreen(),
           ar: ArFixo(
               [_resumo(contexto: _contexto(situacao: 'cobertura baixa'))]));
       await t.pump(const Duration(milliseconds: 100));
-      await t.scrollUntilVisible(find.text('Ar moderada · índice 80'), 200,
+      await t.scrollUntilVisible(find.text('Sem medição agora'), 200,
           scrollable: _rolavel());
-      expect(find.text('Sem medição agora'), findsNothing);
+      expect(find.text('Ar moderada · índice 80'), findsNothing);
+      expect(find.byKey(const Key('ar-poucas-leituras')), findsOneWidget);
     });
   });
 }

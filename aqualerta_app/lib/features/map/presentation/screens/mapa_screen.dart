@@ -837,7 +837,8 @@ class _MarcaRegiaoState extends State<_MarcaRegiao> {
                           key: ValueKey('selo-ar-${regiao.id}'),
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            if (widget.ar?.nivel case final n?)
+                            if (widget.ar?.categoriaVisivel?.nivel
+                                case final n?)
                               Container(
                                 width: 10,
                                 height: 10,
@@ -1385,14 +1386,26 @@ class _LegendaSatelite extends StatelessWidget {
   }
 }
 
-/// "Ar 54 · Moderada". Em região só com modelo, em época de fumaça ou com
-/// muitos focos, "Boa" nunca aparece sozinho: "Boa (estimativa)".
+/// Texto do selo do mapa. Mesma regra do cartão: "Boa" e "Moderada" só vêm de
+/// uma MEDIÇÃO do sensor com cobertura; o modelo sozinho nunca tranquiliza.
+///   "Ar Muito ruim · sensor"                 sensor com cobertura
+///   "Ar Ruim · sensor, poucas leituras"      poucas leituras, só de "ruim" para cima
+///   "Ar 150 · Muito ruim (estimativa)"       sem medição; modelo de "ruim" para cima
+///   "Ar sem medição"                         sem medição e o modelo diz "Boa/Moderada"
+///   "Ar sem estimativa"                      nada (nem sensor, nem modelo)
 String? textoSeloAr(ResumoAr? ar, {bool carregando = false}) {
   if (ar == null) return carregando ? 'Ar …' : null;
-  final n = ar.nivel;
-  if (n == null) return 'Ar sem estimativa';
-  final cautela = n == NivelAr.n1 && (ar.contexto?.cautelaBoa ?? false);
-  return 'Ar ${ar.iqar} · ${n.nome}${cautela ? ' (estimativa)' : ''}';
+  final cat = ar.categoriaVisivel;
+  if (cat != null) {
+    return switch (cat.origem) {
+      OrigemAr.sensor => 'Ar ${cat.nivel.nome} · sensor',
+      OrigemAr.sensorParcial =>
+        'Ar ${cat.nivel.nome} · sensor, poucas leituras',
+      OrigemAr.modelo => 'Ar ${ar.iqar} · ${cat.nivel.nome} (estimativa)',
+    };
+  }
+  if (ar.agora != null || ar.iqar != null) return 'Ar sem medição';
+  return 'Ar sem estimativa';
 }
 
 /// Legenda da camada de qualidade do ar: as faixas do índice (IQAr do MMA)
@@ -1425,7 +1438,8 @@ class _LegendaAr extends StatelessWidget {
       SituacaoAr.carregando => 'carregando…',
     };
     return Semantics(
-      label: 'Legenda da qualidade do ar, índice estimado pelo modelo: '
+      label:
+          'Legenda da qualidade do ar, faixas do índice (sensor ou estimativa do modelo): '
           '${NivelAr.values.map((n) => '${n.nome} ${faixa(n)}').join(', ')}; $detalhe',
       excludeSemantics: true,
       child: Container(
@@ -1441,7 +1455,7 @@ class _LegendaAr extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Ar (modelo) · $detalhe',
+            Text('Ar (sensor ou modelo) · $detalhe',
                 style: t.labelSmall!.copyWith(fontWeight: FontWeight.w700),
                 overflow: TextOverflow.ellipsis),
             const SizedBox(height: 4),

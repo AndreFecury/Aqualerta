@@ -99,26 +99,34 @@ void main() {
 
   group('Cartão: 24 h e agora lado a lado', () {
     testWidgets(
-        'ar piorou: mostra as duas, rotuladas, e o aviso em linguagem simples',
-        (t) async {
+        'ar piorou: manchete do sensor, a média de 24 h do sensor ao lado e o '
+        'aviso em linguagem simples', (t) async {
       await montar(t, const MapaScreen(),
           ar: ArFixo([_resumo(agora: AgoraAr.doJson(_agora()))]));
       await t.pump(const Duration(milliseconds: 100));
       await t.scrollUntilVisible(find.byKey(const Key('ar-agora')), 200,
           scrollable: _rolavel());
-      expect(find.text('Ar moderada · índice 54'), findsOneWidget,
-          reason: 'a categoria oficial (24 h) continua');
-      expect(find.byKey(const Key('ar-rotulo-24h')), findsOneWidget);
-      expect(find.textContaining('média de 24 h'), findsWidgets);
+      expect(find.text('Ar péssima'), findsOneWidget,
+          reason: 'a categoria da manchete é a do sensor (média de 3 h)');
+      expect(find.text('Ar moderada · índice 54'), findsNothing,
+          reason: 'o modelo não é mais a manchete');
+      expect(find.byKey(const Key('ar-rotulo-sensor')), findsOneWidget);
       expect(
           find.textContaining('Agora (sensor, média das últimas 3 h): '
               'MP2,5 de 126,7 µg/m³, na faixa péssima do IQAr'),
+          findsOneWidget);
+      expect(find.text('Média de 24 h do sensor: 24,6 µg/m³ (faixa moderada).'),
           findsOneWidget);
       expect(find.textContaining('Até as 20:00'), findsOneWidget,
           reason: '00:00 UTC = 20:00 em Manaus');
       expect(find.byKey(const Key('ar-piorou')), findsOneWidget);
       expect(
           find.textContaining('Nas últimas horas o ar piorou'), findsOneWidget);
+      // O modelo, bem abaixo do sensor, vira estimativa rotulada com o alerta.
+      expect(find.byKey(const Key('ar-estimativa-modelo')), findsOneWidget);
+      expect(
+          find.textContaining('O modelo está bem abaixo do que o sensor mede'),
+          findsOneWidget);
       expect(find.textContaining('AQI'), findsNothing);
     });
 
@@ -133,12 +141,14 @@ void main() {
       expect(find.byKey(const Key('ar-piorou')), findsNothing);
     });
 
-    testWidgets('sem o agora (sensor sem 3 h válidas): nada inventado',
+    testWidgets(
+        'sem o agora (sensor sem 3 h válidas): sem medição, nada inventado',
         (t) async {
       await montar(t, const MapaScreen(), ar: ArFixo([_resumo()]));
       await t.pump(const Duration(milliseconds: 100));
-      await t.scrollUntilVisible(find.text('Ar moderada · índice 54'), 200,
+      await t.scrollUntilVisible(find.text('Sem medição agora'), 200,
           scrollable: _rolavel());
+      expect(find.text('Ar moderada · índice 54'), findsNothing);
       expect(find.byKey(const Key('ar-agora')), findsNothing);
       expect(find.byKey(const Key('ar-piorou')), findsNothing);
     });

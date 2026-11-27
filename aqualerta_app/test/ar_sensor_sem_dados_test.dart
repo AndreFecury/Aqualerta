@@ -214,14 +214,23 @@ void main() {
       expect(find.text('Ar moderada · índice 80'), findsNothing);
     });
 
-    testWidgets('sensor saudável: manchete com a categoria, sem o aviso',
+    testWidgets('sensor em dia: manchete do sensor, sem "sem medição"',
         (t) async {
       final r = ResumoAr.doJson(_linha())
-          .comContexto(ContextoAr.doJson(_contexto(situacao: 'saudável')));
+          .comContexto(ContextoAr.doJson(_contexto(situacao: 'saudável')))
+          .comAgora(AgoraAr.doJson({
+            'region_id': 'r-compensa',
+            'pm25_3h': 40.0,
+            'iqar_3h': 68,
+            'nivel_3h': 'N2',
+            'pm25_24h_sensor': 38.0,
+            'nivel_24h_sensor': 'N2',
+          }));
       await _abrir(t, r);
-      expect(find.text('Ar moderada · índice 80'), findsOneWidget);
+      expect(find.text('Ar moderada'), findsOneWidget);
       expect(find.text('Sem medição agora'), findsNothing);
-      expect(find.byKey(const Key('ar-modelo-subestima')), findsNothing);
+      expect(find.byKey(const Key('ar-modelo-subestima')), findsNothing,
+          reason: 'modelo e sensor concordam: sem o aviso de subestimativa');
       expect(find.byKey(const Key('ar-sensor-sem-dados')), findsNothing);
     });
   });

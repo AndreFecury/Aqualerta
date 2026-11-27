@@ -53,6 +53,19 @@ enum NivelAr {
 
 enum TendenciaAr { sobe, estavel, desce }
 
+/// De onde vem a manchete do cartão. Ver [ResumoAr.manchete].
+enum MancheteAr { sensor, poucasLeituras, semMedicao }
+
+/// Origem de uma categoria mostrada ao usuário.
+enum OrigemAr { sensor, sensorParcial, modelo }
+
+/// Categoria (faixa do IQAr) que pode ser mostrada, e de onde ela vem.
+class CategoriaAr {
+  const CategoriaAr(this.nivel, this.origem);
+  final NivelAr nivel;
+  final OrigemAr origem;
+}
+
 /// Resumo da qualidade do ar de uma região (RPC `ar_resumo`). É ESTIMATIVA
 /// DE MODELO (CAMS, ~45 km), não medição local, e nunca muda o risco de
 /// cheia da região.
@@ -132,16 +145,44 @@ class ResumoAr {
 
   NivelAr? get nivel => iqar == null ? null : NivelAr.doIndice(iqar!);
 
-  /// Só há o modelo: sem sensor perto, com o sensor parado ou sem o contexto
-  /// (não dá para afirmar que há medição). Então o cartão não abre com uma
-  /// categoria tranquilizadora (Boa/Moderada) vinda do modelo: diz "Sem
-  /// medição agora" e mostra a estimativa como linha rotulada. Uma média de
-  /// 3 h do sensor ([agora]) prova que há medição recente.
-  bool get semMedicaoAgora {
-    if (agora != null) return false;
-    if (semDados != null) return true;
-    final c = contexto;
-    return c == null || !c.temSensor || c.sensorSituacao == 'parado';
+  /// De onde vem a manchete do cartão (e o selo do mapa):
+  ///  - [MancheteAr.sensor]: há leitura recente do sensor (média de 3 h) e
+  ///    cobertura de 24 h: a categoria é a do SENSOR;
+  ///  - [MancheteAr.poucasLeituras]: há média de 3 h, mas poucas leituras nas
+  ///    últimas 24 h: valor parcial, nunca tratado como leitura normal;
+  ///  - [MancheteAr.semMedicao]: sem leitura recente (sensor parado, ausente,
+  ///    contexto/ar_agora não carregados, ou menos de 3 h seguidas): o modelo
+  ///    só aparece como estimativa rotulada. Uma média de 3 h do sensor
+  ///    ([agora]) prova que há medição recente.
+  MancheteAr get manchete {
+    final a = agora;
+    if (a == null) return MancheteAr.semMedicao;
+    return a.poucasLeituras ? MancheteAr.poucasLeituras : MancheteAr.sensor;
+  }
+
+  bool get semMedicaoAgora => manchete == MancheteAr.semMedicao;
+
+  /// A única categoria que o cartão e o selo do mapa podem mostrar como
+  /// categoria, ou null se nenhuma pode:
+  ///  - sensor com cobertura: a faixa do sensor;
+  ///  - poucas leituras: só de "ruim" para cima (pode SUBIR, nunca tranquilizar);
+  ///  - sem medição: só a estimativa do modelo de "ruim" para cima.
+  /// "Boa" e "Moderada" só aparecem quando vêm de uma medição com cobertura.
+  CategoriaAr? get categoriaVisivel {
+    final a = agora;
+    switch (manchete) {
+      case MancheteAr.sensor:
+        return CategoriaAr(a!.nivel, OrigemAr.sensor);
+      case MancheteAr.poucasLeituras:
+        return a!.nivel.index >= NivelAr.n3.index
+            ? CategoriaAr(a.nivel, OrigemAr.sensorParcial)
+            : null;
+      case MancheteAr.semMedicao:
+        final n = nivel;
+        return n != null && n.index >= NivelAr.n3.index
+            ? CategoriaAr(n, OrigemAr.modelo)
+            : null;
+    }
   }
 
   /// A coleta é de hora em hora; mais de 3 h sem dado novo é atraso.
@@ -222,6 +263,8 @@ class AgoraAr {
     required this.nivel,
     this.iqar,
     this.ate,
+    this.pm25Dia,
+    this.nivelDia,
   });
 
   final String regiaoId;
@@ -235,6 +278,23 @@ class AgoraAr {
 
   /// Fim da última hora usada (UTC).
   final DateTime? ate;
+
+  /// Média de 24 h do PRÓPRIO sensor e sua faixa; null com menos de 18 horas
+  /// válidas nas últimas 24 h ("poucas leituras", ex-"cobertura baixa").
+  final double? pm25Dia;
+  final NivelAr? nivelDia;
+
+  /// 3 h válidas, mas sem cobertura de 24 h: valor parcial.
+  bool get poucasLeituras => pm25Dia == null;
+
+  /// A faixa de 3 h está 2+ níveis acima da faixa de 24 h do mesmo sensor.
+  bool get piorouNoSensor => nivelDia != null && piorou(nivelDia!);
+
+  String? get textoDia => pm25Dia == null || nivelDia == null
+      ? null
+      : 'Média de 24 h do sensor: '
+          '${pm25Dia!.toStringAsFixed(1).replaceAll('.', ',')} µg/m³ '
+          '(faixa ${nivelDia!.nome.toLowerCase()}).';
 
   /// Níveis a mais que o índice de 24 h para dizer que o ar piorou
   /// (`agora_niveis_aviso` em ar_config).
@@ -273,6 +333,8 @@ class AgoraAr {
       nivel: nivel,
       iqar: (j['iqar_3h'] as num?)?.toInt(),
       ate: j['ate'] == null ? null : DateTime.parse(j['ate'] as String),
+      pm25Dia: (j['pm25_24h_sensor'] as num?)?.toDouble(),
+      nivelDia: _nivel(j['nivel_24h_sensor']),
     );
   }
 }

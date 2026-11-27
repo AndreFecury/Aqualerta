@@ -38,6 +38,32 @@ Finder _rolavel() => find
         matching: find.byType(Scrollable))
     .first;
 
+/// Linha de ar_agora() com o sensor em dia (média de 3 h e de 24 h do sensor).
+Map<String, dynamic> _agoraSensor({
+  double pm = 40.0,
+  String nivel = 'N2',
+  double? dia = 38.0,
+  String? nivelDia = 'N2',
+}) =>
+    {
+      'region_id': 'r-compensa',
+      'pm25_3h': pm,
+      'iqar_3h': 68,
+      'nivel_3h': nivel,
+      'pm25_24h_sensor': dia,
+      'nivel_24h_sensor': nivelDia,
+      'piorou': false,
+      'ate': '2026-11-21T22:00:00+00:00',
+      'ultima_leitura': '2026-11-21T22:00:00+00:00',
+      'sensor_parado': false,
+      'sem_dados_h': null,
+    };
+
+/// Região com sensor em dia: a manchete vem do sensor (média de 3 h).
+ResumoAr _comSensor({int iqar = 54}) => ResumoAr.doJson(_linha(iqar: iqar))
+    .comContexto(ContextoAr.doJson(_contexto(ok: false)))
+    .comAgora(AgoraAr.doJson(_agoraSensor())!);
+
 void main() {
   group('Domínio', () {
     test('níveis do IQAr nas fronteiras do MMA', () {
@@ -135,29 +161,40 @@ void main() {
   });
 
   group('Bloco no cartão da região', () {
-    testWidgets('mostra índice, poluente, previsão e a ressalva de modelo',
+    testWidgets(
+        'sensor em dia: manchete do sensor; o modelo vira estimativa rotulada',
         (t) async {
-      // Sensor saudável perto: sem ele a manchete vira "Sem medição agora".
-      await montar(t, const MapaScreen(),
-          ar: ArFixo([
-            ResumoAr.doJson(_linha())
-                .comContexto(ContextoAr.doJson(_contexto(ok: false)))
-          ]));
+      await montar(t, const MapaScreen(), ar: ArFixo([_comSensor()]));
       await t.pump(const Duration(milliseconds: 100));
-      await t.scrollUntilVisible(find.text('Ar moderada · índice 54'), 200,
+      await t.scrollUntilVisible(
+          find.byKey(const Key('ar-manchete-sensor')), 200,
           scrollable: _rolavel());
-      expect(find.textContaining('partículas finas (MP2,5)'), findsOneWidget);
+      // A categoria é a do SENSOR (média de 3 h), sem "índice" do modelo.
+      expect(find.text('Ar moderada'), findsOneWidget);
+      expect(find.text('Ar moderada · índice 54'), findsNothing);
+      expect(find.textContaining('MP2,5 de 40,0 µg/m³'), findsOneWidget);
+      expect(find.text('Média de 24 h do sensor: 38,0 µg/m³ (faixa moderada).'),
+          findsOneWidget);
+      // O modelo é só uma linha secundária, rotulada.
+      expect(
+          find.text('Estimativa do modelo (CAMS, não é medição): '
+              'ar moderada, índice 54.'),
+          findsOneWidget);
+      expect(find.textContaining('partículas finas (MP2,5)'), findsNothing,
+          reason: 'valor do modelo sem rótulo não aparece no modo sensor');
       // A previsão numérica de 48 h está escondida (experimental).
       expect(find.textContaining('pior previsto'), findsNothing);
       expect(find.byKey(const Key('ar-previsao-experimental')), findsOneWidget);
       expect(find.textContaining('Crianças, idosos'), findsOneWidget);
-      expect(find.textContaining('Estimativa de modelo, não medição local'),
+      expect(find.textContaining('O sensor é um aparelho de baixo custo'),
           findsOneWidget);
-      // Rótulo lido pelo leitor de tela (o cartão fica abaixo da dobra).
+      expect(find.textContaining('Open-Meteo.com'), findsOneWidget);
+      // Rótulo lido pelo leitor de tela: medição do sensor, não "índice".
       expect(
           find.byWidgetPredicate((w) =>
               w is Semantics &&
-              w.properties.label == 'Qualidade do ar moderada, índice 54'),
+              w.properties.label ==
+                  'Medição do sensor: qualidade do ar moderada'),
           findsOneWidget);
     });
 
@@ -185,11 +222,7 @@ void main() {
 
     testWidgets('erro: botão de tentar de novo busca outra vez', (t) async {
       // Sensor saudável perto (a manchete com a categoria só vale com medição).
-      final fonte = ArFixo([
-        ResumoAr.doJson(_linha())
-            .comContexto(ContextoAr.doJson(_contexto(ok: false)))
-      ])
-        ..falhar = true;
+      final fonte = ArFixo([_comSensor()])..falhar = true;
       await montar(t, const MapaScreen(), ar: fonte);
       await t.pump(const Duration(milliseconds: 100));
       final botao = find.text('Tentar de novo');
@@ -203,7 +236,7 @@ void main() {
               find.ancestor(of: botao.last, matching: find.byType(TextButton)))
           .onPressed!();
       await t.pump(const Duration(milliseconds: 100));
-      expect(find.text('Ar moderada · índice 54'), findsOneWidget);
+      expect(find.text('Ar moderada'), findsOneWidget);
     });
   });
 
@@ -218,23 +251,23 @@ void main() {
           ar: ArFixo([ResumoAr.doJson(_linha())]));
       await t.pump(const Duration(milliseconds: 100));
       expect(find.byKey(const ValueKey('selo-ar-r-compensa')), findsNothing);
-      expect(find.textContaining('Ar (modelo)'), findsNothing);
+      expect(find.textContaining('Ar (sensor ou modelo)'), findsNothing);
     });
 
     testWidgets(
-        'ligada: selo com número e nível no marcador, sem pintar o município, '
-        'legenda com as faixas', (t) async {
+        'ligada: selo com a categoria do sensor no marcador, sem pintar o '
+        'município, legenda com as faixas', (t) async {
       await montar(t, const MapaScreen(),
-          ar: ArFixo([ResumoAr.doJson(_linha())]), preferencias: ligada);
+          ar: ArFixo([_comSensor()]), preferencias: ligada);
       await t.pump(const Duration(milliseconds: 100));
       await t.pump(const Duration(milliseconds: 100));
       expect(
           find.descendant(
               of: find.byKey(const ValueKey('selo-ar-r-compensa')),
-              matching: find.text('Ar 54 · Moderada')),
+              matching: find.text('Ar Moderada · sensor')),
           findsOneWidget);
       expect(find.byKey(const ValueKey('camada-ar')), findsNothing,
-          reason: 'o valor é de um ponto da grade, não do município');
+          reason: 'o valor é de um ponto, não do município');
       expect(find.text('Boa · 0 a 40'), findsOneWidget);
       expect(find.text('Péssima · acima de 200'), findsOneWidget);
       for (final n in NivelAr.values) {
@@ -242,14 +275,16 @@ void main() {
       }
     });
 
-    testWidgets('"Boa" com cautela vira "Boa (estimativa)" no selo', (t) async {
+    testWidgets('sem medição, modelo "Boa": o selo não tranquiliza', (t) async {
       final r = ResumoAr.doJson(_linha(iqar: 30)).comContexto(
           ContextoAr.doJson(_contexto(semSensor: true, cautela: true)));
       await montar(t, const MapaScreen(),
           ar: ArFixo([r]), preferencias: ligada);
       await t.pump(const Duration(milliseconds: 100));
       await t.pump(const Duration(milliseconds: 100));
-      expect(find.text('Ar 30 · Boa (estimativa)'), findsOneWidget);
+      expect(find.text('Ar sem medição'), findsOneWidget);
+      expect(find.text('Ar 30 · Boa'), findsNothing);
+      expect(find.textContaining('Boa ('), findsNothing);
     });
 
     testWidgets('sem estimativa: o selo diz isso', (t) async {
@@ -259,7 +294,8 @@ void main() {
       await t.pump(const Duration(milliseconds: 100));
       await t.pump(const Duration(milliseconds: 100));
       expect(find.text('Ar sem estimativa'), findsOneWidget);
-      expect(find.text('Ar (modelo) · sem estimativa'), findsOneWidget);
+      expect(
+          find.text('Ar (sensor ou modelo) · sem estimativa'), findsOneWidget);
     });
 
     testWidgets('erro de rede: a legenda diz que não carregou', (t) async {
@@ -270,7 +306,7 @@ void main() {
           });
       await t.pump(const Duration(milliseconds: 100));
       await t.pump(const Duration(milliseconds: 100));
-      expect(find.text('Ar (modelo) · não carregou'), findsOneWidget);
+      expect(find.text('Ar (sensor ou modelo) · não carregou'), findsOneWidget);
     });
 
     testWidgets('painel de exibição liga a camada e guarda a escolha',
