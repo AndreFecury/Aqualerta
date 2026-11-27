@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AquaAlerta</title>
+<meta name="description" content="Nível dos rios e chuva em tempo real, com avisos de cheia e alagamento na Amazônia.">
+<style>
+  :root { --fundo:#ffffff; --texto:#1b1f24; --suave:#57606a; --linha:#d8dee4; --canal:#0b5cad; }
+  @media (prefers-color-scheme: dark) {
+    :root { --fundo:#0f1419; --texto:#e6edf3; --suave:#9aa5b1; --linha:#30363d; --canal:#6cb6ff; }
+  }
+  body { margin:0; background:var(--fundo); color:var(--texto);
+         font: 17px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 720px; margin: 0 auto; padding: 40px 16px 64px; }
+  h1 { font-size: 2rem; margin: 0; }
+  .lema { color: var(--suave); margin: 0 0 28px; font-size: 1.1rem; }
+  ul { padding-left: 1.2em; }
+  li { margin: 6px 0; }
+  a { color: var(--canal); }
+  footer { margin-top: 40px; padding-top: 16px; border-top: 1px solid var(--linha); color: var(--suave); font-size: 0.95rem; }
+</style>
+</head>
+<body>
+<main>
+  <h1>AquaAlerta</h1>
+  <p class="lema">Informação que protege</p>
+  <p>O AquaAlerta acompanha o nível dos rios e a chuva nos municípios monitorados e avisa
+  no celular quando há risco de cheia ou de alagamento.</p>
+  <ul>
+    <li>Nível dos rios a cada 30 minutos (ANA), comparado às cotas de alerta e inundação (SGB).</li>
+    <li>Chuva nos pluviômetros do CEMADEN, com aviso de chuva forte em poucos minutos.</li>
+    <li>Água detectada por satélite radar (Copernicus, Sentinel-1).</li>
+    <li>Notificações das regiões que você escolhe seguir.</li>
+  </ul>
+  <p><a href="estudo-seca-2026.html">Estudo: a seca de 2026 no Rio Negro, comparada a 2023 e 2024</a></p>
+  <p>Os avisos são automáticos e não substituem a Defesa Civil. Em emergência,
+  ligue <strong>199</strong> (Defesa Civil) ou <strong>193</strong> (Bombeiros).</p>
+  <footer>
+    <a href="privacidade.html">Política de Privacidade</a> ·
+    Contato: <a href="mailto:aquaalerta.app@gmail.com">aquaalerta.app@gmail.com</a>
+  </footer>
+</main>
+</body>
+</html>

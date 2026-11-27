@@ -1,0 +1,9 @@
+{
+  "codigo": 57,
+  "versao": "4.13.0",
+  "apk": "https://andrefecury.github.io/Aqualerta/app/aqualerta.apk?v=57",
+  "sha256": "5639c15d82b6c2cf08c61ee692b234c2eaba20af21f049068aea80c3d1bdee1d",
+  "tamanho": 59944223,
+  "notas": "Qualidade do ar: com o sensor em dia, o cartão e o mapa mostram a medição do sensor (média de 3 h) em vez da estimativa do modelo. Sem medição, o cartão diz 'Sem medição agora' e o modelo aparece só como estimativa rotulada.",
+  "publicadoEm": "2026-11-27T04:04:22Z"
+}
