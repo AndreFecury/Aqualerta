@@ -147,8 +147,9 @@ void main() {
       await t.scrollUntilVisible(find.text('Ar moderada · índice 54'), 200,
           scrollable: _rolavel());
       expect(find.textContaining('partículas finas (MP2,5)'), findsOneWidget);
-      expect(find.textContaining('pior previsto em 48 h: moderada (55)'),
-          findsOneWidget);
+      // A previsão numérica de 48 h está escondida (experimental).
+      expect(find.textContaining('pior previsto'), findsNothing);
+      expect(find.byKey(const Key('ar-previsao-experimental')), findsOneWidget);
       expect(find.textContaining('Crianças, idosos'), findsOneWidget);
       expect(find.textContaining('Estimativa de modelo, não medição local'),
           findsOneWidget);

@@ -15,6 +15,11 @@ const textoLimitacoesAr =
     'incêndio confirmado: nuvens escondem fogo e queima de roçado também '
     'conta. A qualidade do ar não muda o risco de cheia.';
 
+/// Previsão de 48 h: experimental, sem número na tela até ser validada.
+const textoPrevisaoExperimental =
+    'Previsão de 48 h: experimental, ainda sem validação. Por isso o valor '
+    'não é mostrado; não use para decidir.';
+
 /// "16:00" na hora de Manaus (UTC−4).
 String horaManaus(DateTime d) {
   final m = d.toUtc().subtract(const Duration(hours: 4));
@@ -263,21 +268,23 @@ class BlocoAr extends StatelessWidget {
             'Puxado por ${ResumoAr.nomePoluente(r.poluente)}'
             '${r.pm25Media24h != null ? ' · MP2,5 de ${r.pm25Media24h!.toStringAsFixed(1).replaceAll('.', ',')} µg/m³ na média de 24 h' : ''}.',
             style: t.bodyMedium),
-        if (r.tendencia != null || prev != null) ...[
+        if (r.tendencia != null) ...[
           const SizedBox(height: 4),
           Text(
-              [
-                if (r.tendencia != null)
-                  switch (r.tendencia!) {
-                    TendenciaAr.sobe => 'Piorando em relação a ontem',
-                    TendenciaAr.desce => 'Melhorando em relação a ontem',
-                    TendenciaAr.estavel => 'Parecido com ontem',
-                  },
-                if (prev != null && r.horaPiorPrevista != null)
-                  'pior previsto em 48 h: ${NivelAr.doIndice(prev).nome.toLowerCase()} '
-                      '($prev) ${diaHoraManaus(r.horaPiorPrevista!)}',
-              ].join('; '),
+              switch (r.tendencia!) {
+                TendenciaAr.sobe => 'Piorando em relação a ontem',
+                TendenciaAr.desce => 'Melhorando em relação a ontem',
+                TendenciaAr.estavel => 'Parecido com ontem',
+              },
               style: t.bodySmall),
+        ],
+        // A previsão numérica de 48 h NÃO é mostrada até ser validada contra
+        // valores observados (pico observado ~IQAr 177 contra ~70 previstos;
+        // docs/ar-previsao-erro.md). O dado continua no modelo de domínio.
+        if (prev != null) ...[
+          const SizedBox(height: 4),
+          Text(textoPrevisaoExperimental,
+              key: const Key('ar-previsao-experimental'), style: t.bodySmall),
         ],
         if (r.focos24h > 0) ...[
           const SizedBox(height: 6),
